@@ -17,6 +17,13 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# Ignore Files anywhere in folder structure
+pollution.csv
+.Rproj.user
+.Rhistory
+.RData
+household_power_consumption.txt
+
 # =========================
 # Operating System Files
 # =========================
@@ -45,3 +52,4 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+JHU/Data Science/Machine_Learning/Reference/data/Samsung-Human-Activity.csv

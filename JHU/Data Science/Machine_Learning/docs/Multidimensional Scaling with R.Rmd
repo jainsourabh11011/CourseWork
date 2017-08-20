@@ -1,0 +1,54 @@
+---
+title: "Multidimensional Scaling with R"
+output: html_document
+---
+
+See http://www.r-statistics.com/2016/01/multidimensional-scaling-with-r-from-mastering-data-analysis-with-r/
+
+Feature extraction tends to be one of the most important steps in machine learning and data science projects, so I decided to republish a related short section from my intermediate book on how to analyze data with R. The 9th chapter is dedicated to traditional dimension reduction methods, such as Principal Component Analysis, Factor Analysis and Multidimensional Scaling — from which the below introductory examples will focus on that latter.
+
+Multidimensional Scaling (MDS) is a multivariate statistical technique first used in geography. The main goal of MDS it is to plot multivariate data points in two dimensions, thus revealing the structure of the dataset by visualizing the relative distance of the observations. Multidimensional scaling is used in diverse fields such as attitude study in psychology, sociology or market research.
+
+Although the MASS package provides non-metric methods via the isoMDS function, we will now concentrate on the classical, metric MDS, which is available by calling the cmdscale function bundled with the stats package. Both types of MDS take a distance matrix as the main argument, which can be created from any numeric tabular data by the dist function.
+
+But before such more complex examples, let’s see what MDS can offer for us while working with an already existing distance matrix, like the built-in eurodist dataset:
+
+```{r}
+as.matrix(eurodist)[1:5, 1:5]
+```
+The above subset (first 5-5 values) of the distance matrix represents the travel distance between 21 European cities in kilometers. Running classical MDS on this example returns:
+```{r}
+mds <- cmdscale(eurodist)
+mds
+```
+These scores are very similar to two principal components (discussed in the previous, Principal Component Analysis section), such as running prcomp(eurodist)$x[, 1:2]. As a matter of fact, PCA can be considered as the most basic MDS solution.
+
+Anyway, we have just transformed (reduced) the 21-dimensional space into 2 dimensions, which can be plotted very easily — unlike the original distance matrix with 21 rows and 21 columns:
+```{r}
+plot(mds)
+```
+
+Does it ring a bell? If not yet, the below image might be more helpful, where the following two lines of code also renders the city names instead of showing anonymous points:
+```{r}
+plot(mds, type = 'n')
+text(mds[, 1], mds[, 2], labels(eurodist))
+```
+
+Although the y axis seems to be flipped (which you can fix by multiplying the second argument of text by -1), but we have just rendered a map of some European cities from the distance matrix — without any further geographical data. I hope you find this rather impressive!
+
+How to render this plot with the new version of ggplot2 to avoid overlaps in the city names and suppressing the not that useful x andy axis labels and ticks:
+```{r message=FALSE}
+library(ggplot2)
+ggplot(as.data.frame(mds), aes(V1, -V2, label = rownames(mds))) +
+     geom_text(check_overlap = TRUE) + theme_minimal() + xlab('') + ylab('') +
+     scale_y_continuous(breaks = NULL) + scale_x_continuous(breaks = NULL)
+```
+
+But let’s get back to the original topic and see how to apply MDS on non-geographic data, which was not prepared to be a distance matrix. We will use the mtcars dataset in the following example resulting in a plot with no axis elements:
+```{r}
+mds <- cmdscale(dist(mtcars))
+plot(mds, type = 'n', axes = FALSE, xlab = '', ylab = '')
+text(mds[, 1], mds[, 2], rownames(mds))
+```
+
+The above plot shows the 32 cars of the original dataset scattered in a two dimensional space. The distance between the elements was computed by MDS, which took into account all the 11 original numeric variables and it makes vert easy to identify the similar and very different car types. 

@@ -1,0 +1,190 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+```{r warning=FALSE, message=FALSE}
+library(dplyr)
+library(ggplot2)
+
+load("./data/brfss2013.Rdata")
+```
+#Research questions
+
+##Research quesion 1: 
+I would like to explore the relationship between exercise (cardio and strength training) and good health using relative frequencies as probability. My first research question is: What is the conditional probability P(good health | cardio and strength)? Why? The study seeks to detect behavioural patterns that are likely to lead to a good health status. Thus, it would be interesting to find out how strong the relationship between good health and exercise is for our sample.
+
+##Research question 2: 
+In my second research question I would like to find out more about those observations who reported that they do exercise. The idea in mind is to find exercise patterns for certain subgroups using the variables health status, type of exercise as well as exercise frequencies and training durations. This can be best done with visual representations. Why? Again, we would like to detect behavioural patterns that impact health status. Since we explore the general relationship between good health and exercise in research question 1, it makes sense to find out about exercising patterns in more detail in the second research question.
+
+##Research quesion 3: 
+I would like to explore sleeping patterns for certain subgroups of the sample and compare it with reported health status information. It is widely stated that exercise promotes good health and helps with good sleep which in turn is believed to promote good health. I would like to explore if these relationships are also true for our sample. We cannot generalize using exploratory analysis but we can detect tendencies that can then be further tested in the next steps of analyses. –> In short, my 3rd research question is: What is the relationship between exercise, sleep time and health status?
+
+#Exploratory data analysis
+
+##Research question 1: 
+###P(good health | cardio and strength)
+
+Let me first briefly describe the input variables for your convencience. The input variables of the dataset for our first research questions are “genhlth”, “exerany2” and “strength”. “Genhlth” records the subjective degree of perceived health, where categories range from “Poor” to “Excellent”. “exerany2” records whether the subject does cardio exercise or not and the “strength” variable records how often the subjects to strength training.
+First we subset the data selecting only the variables that are of interest for this projects’s research questions. Then we prepare the data for analysis by transforming variables and calculating new ones.
+```{r}
+### choose a few vars for research
+brfss.sub <- brfss2013[c("X_state", "sex", "genhlth", "sleptim1", "bphigh4", "exerany2", "exeroft1", "exerhmm1", "strength","fvgreen", "vegetab1")]
+```
+Since in the strength training variable subjects could answer that they to strength training x times per week, month or day, it was necessary to transform the variable so that frequencies can be compared more easily. The variable was recalculated so that the new variable records the frequency of strength training in intervals with days as unit. E.g. 3 would mean “does strength training every 3rd day”.
+```{r}
+# First we transform the variables so they can be evaluated and compared better. .
+brfss.sub.1 <- brfss.sub %>% mutate(exerc_often = ifelse(exeroft1 > 100 & exeroft1 < 200, 7/(exeroft1 - 100),
+ifelse(exeroft1 > 200 & exeroft1 < 300, 30/(exeroft1-200),ifelse(exeroft1==0,0,NA))))
+
+brfss.sub.1 <- brfss.sub.1 %>% mutate(strength_often = ifelse(strength > 100 & strength < 200, 7/(strength - 100),
+ifelse(strength > 200 & strength < 300, 30/(strength-200),ifelse(strength==0,0,NA))))
+```
+
+#Research question 1
+##P(good health | cardio and strength) 
+We transform the numeric variable “strength” into a cateogrical, boolean variable. For the “genhlth” variable, we reduce the number of categories to two so that it is also a boolean variable.
+
+Define boolean var for strength training so that we can identify obs that do strength training
+```{r}
+brfss.sub.1 <- brfss.sub.1 %>% mutate(bstrength=ifelse(strength_often > 0 & !is.na(strength_often), 1,0))
+## Define exercising types
+brfss.sub.1 <- brfss.sub.1 %>% mutate(exer_behav= ifelse(bstrength==1 & exerany2=="Yes","cardio and strength",ifelse(bstrength== 0 & exerany2=="No","neither",ifelse(bstrength==1,"strength only","cardio only"))))
+brfss.sub.1 <- brfss.sub.1[!is.na(brfss.sub.1$exer_behav), ]
+## Reduce health status to 2 categories 
+brfss.sub.1 <- brfss.sub.1 %>% mutate(hlth=ifelse(genhlth %in% c("Poor","Fair"), "Not good", "Good"))
+```
+To find out what would be interesting to test in the first place and to get a feeling of the type of relationships of the chosen variables, we first plot a visual representation that can also help us to validate our calculated figures.
+```{r}
+##Check results for research question 1 visually
+## plot their general health frequencies
+ggplot(brfss.sub.1, aes(x=exer_behav, fill=hlth)) + geom_bar(position="fill")
+```
+
+Here in our calculated variable we see that around 81% of the population sample reported a good health status and around 19% a poor health status.
+```{r}
+## Calculate percentages of health status
+hlth_status <- brfss.sub.1 %>% group_by(hlth) %>% summarise(freq=n()/nrow(brfss.sub.1))
+hlth_status
+```
+Now we calculate the second tree level of our relative frequencies tree. We see that around 37% of those people who reported a good health status do strength and cardio training, for instance. We need these frequencies to calculate P(cardio and strength training) since P(good health | cardio and strength) = P(good health and (cardio and strength)/P(cardio and strength).
+```{r}
+## calculate percentage of exercise behaviours for each health category
+hlth_good <- brfss.sub.1 %>% filter(hlth=="Good") 
+hlth_good <- hlth_good %>% group_by(hlth,exer_behav) %>% summarise(freq=n()/nrow(hlth_good))
+hlth_bad <-  brfss.sub.1 %>% filter(hlth=="Not good") 
+hlth_bad <- hlth_bad %>% group_by(hlth,exer_behav) %>% summarise(freq=n()/nrow(hlth_bad))
+exer_health_tree <- rbind(hlth_good, hlth_bad)
+```
+Now we have all the parameters for our formula of conditional probabilities. We calculate P(cardio and strength). We see that ~ 32,7% do cardio and strength training.
+```{r}
+## calculate P(cardio and strength)
+p_cardio_strength <- (exer_health_tree[exer_health_tree$exer_behav=="cardio and strength" & exer_health_tree$hlth=="Good",3] * hlth_status[hlth_status$hlth=="Good",2]) + (exer_health_tree[exer_health_tree$exer_behav=="cardio and strength" & exer_health_tree$hlth=="Not good",3] * hlth_status[hlth_status$hlth=="Not good",2])
+p_cardio_strength
+```
+This result for P(cardio and strength) can be validated with this check where the result is calculate in one go without calculating the individual parameters first. I decided to show both ways so that the statistics being involved can be followed more easily.
+```{r}
+## and now we crosscheck our calculations using an aggregate function.
+## check p_cardio_strength
+check <- brfss.sub.1 %>% group_by(exer_behav) %>% summarise(f=n()/nrow(brfss.sub.1))
+check
+```
+Now we calculate P(good health and (cardio and strength)). We see that ~29,7% of the sample report a good health and do strength and cardio training.
+```{r}
+## calculate p(health good and (cardio and strength))
+p_both <- brfss.sub.1 %>% group_by(hlth,exer_behav) %>% summarise(freq=n()/nrow(brfss.sub.1)) %>% filter(hlth=="Good" & exer_behav =="cardio and strength")
+p_both
+p_both[[3]]
+```
+Again, this we can check by calculating P(good health) * P((cardio and strength)| good health)
+```{r}
+check2 <- (exer_health_tree[exer_health_tree$exer_behav=="cardio and strength" & exer_health_tree$hlth=="Good",3] * hlth_status[hlth_status$hlth=="Good",2])
+check2
+```
+Finally, we can put the calculation steps together and we get P(good health | cardio and strength) ~= 90,7%. We know that around 81% of the whole sample reported a good health status. Looking at our result, we may want to put forth the hypothesis that there is a significant, positive relationship between (cardio and strength)- training and good health. To test this, we would have to do a t-test, which is beyond the scope of exploratory data analysis, but would be the next step in the analysis process.
+```{r}
+## P(good health | cardio and strength)
+res <- p_both[[3]] / p_cardio_strength[[1]]
+res
+```
+
+##Research question 2: 
+To answer this question, we use the variable exerc_often that we calculated at the beginning our analyses. Remind that exerc_often records how often observations do cardio, where values x suggest that the obs does cardio every xth day. First we removed missing values as we are not interested in those.
+We perform brief summary statistics from which we can proceed further. We see that ~72,6% of the sample does exercise. We hence have a good sample size for plotting distributions and know that the majority of the observations do exercise.
+```{r}
+## remove NAs from exerany2
+brfss.sub.2 <- brfss.sub.1[!is.na(brfss.sub.1$exerany2),]
+## first we get an idea of how many subjects do cardio exercise. 
+## yields frequencies for cardio exercise yes/no
+brfss.sub.2.agg.1 <- brfss.sub.2 %>% group_by(exerany2) %>% summarise(nr =n(), freq=n()/nrow(brfss.sub.2))
+brfss.sub.2.agg.1
+```
+Let us further explore exercising patterns by doing summary statistics for a combination of the strength and cardio training variable. We do this so that we get an idea of which visual representation of the sample would make sense to have a closer look at.
+```{r}
+## yields frequencies for if strength training grouped by cardio yes/no
+brfss.sub.2.agg.2 <- brfss.sub.2 %>% group_by(exerany2, bstrength) %>% summarise(nr =n(), freq=n()/nrow(brfss.sub.2))
+brfss.sub.2.agg.2 
+```
+We subset our data for those observations that do cardio and from whom we have data on how often and how long they exercise. We also calculate a new variable suggesting that if an obervation exercises 1 time per week or more, we consider it as frequent training and otherwise as non-frequent training.
+```{r}
+brfss.sub.2.agg.2.1 <- brfss.sub.2  %>% filter(exerany2=="Yes" & exerhmm1 != "NA" & exerc_often !="NA") %>% mutate(exerc_catf = ifelse(exerc_often <=7,"often","not often"))
+```
+We now divide our sample set that does cardio exercise in exercise frequency intervals. We can do this by choosing the numbers of intervals as well as setting the interval boundaries ourselves. E.g. we may choose 3 intervals such that interval 1 is 1-2 times exercise per week, interval 2 3-5 and interval 3 > 5 times per week. Here I chose to use the kmeans clustering function that does the same thing but finds its own interval boundaries. The number of intervals (=clusters) has been chosen freely. The output gives us the three intervals. For example [7,30] means that we have a cluster of observations that do exercise from every 7th day to every 30th day.
+```{r}
+## find exercise types in subjects
+cluster.rows <- kmeans(brfss.sub.2.agg.2.1[c("exerc_often")], centers=3)
+df.clustered <- cbind(brfss.sub.2.agg.2.1,cluster.rows[c("cluster")])
+df.clustered.agg.1 <- df.clustered %>% group_by(cluster) %>% summarise(min(exerc_often), max(exerc_often))
+df.clustered.agg.1
+```
+We calculate a new variable with three levels stating if an observation exercises “very often”, often" or “not often”.
+```{r}
+df.clustered.1 <- df.clustered %>% mutate(cluster=ifelse(cluster==2, "very often", ifelse(cluster==1,"often","not often")))
+```
+Now we have done all the preparation work and can visualise exercising patterns based on our previous calculations. Plot 1: We plot exercise duration distributions for each training frequency interval. We see that observations that exercise often, train longer compared to the other two groups, have a more symmetric distribution but a wider exercise duration range. Observations that train “often”, and “not often” tend to train less long and the distributions are right skewed with a long tail. These distributions look also very similar suggesting that the group differences are not significant- which has to be tested, though! We check our interpretations from the boxplot by printing summary statistics. Here we may want to test further if there is a significant difference between the group that trains “very often” and those who do not train “very often” (not in the scope of exploratory analysis).
+```{r}
+## plot their exercising time distributions dependent on exerc frequency
+dist_exertimes <- boxplot(exerhmm1~cluster, df.clustered.1[c("exerhmm1","cluster")])
+df.clustered.1.stat <- df.clustered.1  %>% group_by(cluster)  %>% summarise(mean_dur = mean(exerhmm1), median_dur=median(exerhmm1), min_dur= min(exerhmm1), max_dur=max(exerhmm1), iqr_dur=IQR(exerhmm1), std_dur=sd(exerhmm1))
+df.clustered.1.stat
+```
+
+Secondly, I chose to do a very brief exploration of the relationship between exercise frequencies and general health. We do this by getting a first impression with a bar plot. The results are interesting since we see that the percentage obervations in our sample that “train often” and feel “Excellent” is smaller than for the groups who train “often” and “not often”. Why this is the case we cannot tell from our current analyses. We may guess that people who train very often are more prone to injuries. To test this further, we would have to look at the poll questions on injuries.
+```{r}
+## plot genhlth distribution depending on cardio exercise times
+ggplot(df.clustered.1, aes(x=cluster,fill=genhlth)) + geom_bar(position="fill")
+```
+
+##Research quesion 3
+###What is the relationship between exercise, sleep time and health status?
+
+First we clean the data. “Sleptim1” records the number of hours a person sleeps per day. We get rid of numbers that do not make sense and that were also not allowed in the answer values of the poll. In the first plot, I am interested about the general distribution of sleep times for the whole sample. We see that the distribution is rather symmetric and that we have a mean sleep time of around 7 hours. This can be verified by the summary statistics where we see that the median and mean are around the same. The IQR suggests that the middle 50% of people sleep between 6 and 8 hours.
+```{r}
+## research question 3
+brfss.sub.3 <- brfss.sub[c("sleptim1")] %>% distinct(sleptim1) %>% arrange(sleptim1)
+brfss.sub.3 <- brfss.sub %>% filter(sleptim1!="NA" & sleptim1!= 103 & sleptim1!=450) %>% mutate(var=1)
+ggplot(brfss.sub.3, aes(x=sleptim1)) + geom_histogram(binwidth=1)
+brfss.sub.3.stat <- brfss.sub.3 %>% group_by(var) %>% summarise(mean(sleptim1), median(sleptim1), IQR(sleptim1))
+brfss.sub.3.stat
+```
+
+Let’s compare the sleep distributions between the group of people who do cardio and who do not cardio exercise. We see that the sleep distributions are very similar and do not seem to be dependent on the exerany2 variable. Alternativel, sleep quality may be dependent on cardio exercise but this would be another research question.
+```{r}
+test <- brfss.sub[c("sleptim1")] %>% distinct(sleptim1)
+brfss.sub.3.cleaned <- brfss.sub[!is.na(brfss.sub$sleptim1) & !is.na(brfss.sub$exerany2), ] %>% filter(sleptim1 %in% c(1:24))
+brfss.sub.3.cleaned.stat <- brfss.sub.3.cleaned %>% group_by(exerany2) %>% summarise(mean(sleptim1), median(sleptim1), IQR(sleptim1))
+brfss.sub.3.cleaned.stat
+ggplot(brfss.sub.3.cleaned, aes(x=factor(exerany2), y=sleptim1)) + geom_boxplot()
+```
+
+After exploring the relationship between cardio exercise and sleep patterns, we now turn to exploring the relationship between health status as a factor variable and sleep times. We find that people from our sample who report a “Poor” health status sleep on average less long and 50% of them sleep less than 6 hours. For people from our sample who report an “Excellent” health status we see that most people cluster at around 7 hours and hardly any sleep less than that. We may want to put the hypothesis forth judging from the different shapes of sleep ditributions for “Poor” and “Excellent” that health status is dependent on sleep time. Again, this has to be tested for significance, though.
+```{r}
+ggplot(brfss.sub.3.cleaned, aes(x=factor(genhlth), y=sleptim1)) + geom_boxplot()
+hlth.sleep.stats <- brfss.sub.3.cleaned %>% group_by(genhlth) %>% summarise(mean=mean(sleptim1), median=median(sleptim1),min=min(sleptim1), max=max(sleptim1), iqr=IQR(sleptim1), sd=sd(sleptim1))
+hlth.sleep.stats
+```
+

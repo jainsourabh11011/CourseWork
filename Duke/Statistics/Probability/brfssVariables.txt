@@ -1,0 +1,127 @@
+iyear: Interview Year
+nummen: Number Of Adult Men In Household
+numwomen: Number Of Adult Women In Household
+genhlth: General Health
+physhlth: Number Of Days Physical Health Not Good
+menthlth: Number Of Days Mental Health Not Good
+poorhlth: Poor Physical Or Mental Health
+sleptim1: How Much Time Do You Sleep
+addepev2: Ever Told You Had A Depressive Disorder
+educa: Education Level
+weight2: Reported Weight In Pounds
+exerany2: Exercise In Past 30 Days
+exract11: Type Of Physical Activity
+exeroft1: How Many Times Walking, Running, Jogging, Or Swimming
+exerhmm1: Minutes Or Hours Walking, Running, Jogging, Or Swimming
+exract21: Other Type Of Physical Activity Giving Most Exercise During Past Month
+exeroft2: How Many Times Walking, Running, Jogging, Or Swimming
+exerhmm2: Minutes Or Hours Walking, Running, Jogging, Or Swimming
+strength: How Many Times Did You Do Physical Activities Or Exercises To Strengthen Your Mu
+qlmentl2: How Many Days Depressed In Past 30 Days
+qlstres2: How Many Days Felt Anxious In Past 30 Days
+qlhlth2: How Many Days Full Of Energy In Past 30 Days
+
+Optional Module 17 - Mental Illness and Stigma
+•misnervs: How Often Feel Nervous Past 30 Days```
+•mishopls: How Often Feel Hopeless Past 30 Days
+•misrstls: How Often Feel Restless Past 30 Days
+•misdeprd: How Often Feel Depressed Past 30 Days
+•miseffrt: How Often Feel Everything Was An Effort Past 30 Days
+•miswtles: How Often Feel Worthless Past 30 Days
+•misnowrk: Emotional Problem Kept You From Doing Work Past 30 Days
+•mistmnt: Receiving Medicine Or Treatment From Health Pro For Emotional Problem
+•mistrhlp: Mental Health Treatment Can Help People Lead Normal Life
+•misphlpf: People Are Generally Caring Toward People With Mental Illness
+
+
+
+Optional Module 14 - Prostate Cancer Screening
+•pcpsaad2: Has A Health Professional Ever Talked With You About The Advantages Of The PSA Test
+•pcpsadi1: Has A Health Professional Ever Talked With You About The Disadvantages Of The PSA Test
+•pcpsare1: Has A Doctor Ever Recommended That You Have A PSA Test?
+•psatest1: Ever Had PSA Test
+•psatime: Time Since Last PSA Test
+•pcpsars1: What Was The Main Reason You Had This PSA Test?
+
+
+Optional Module 15 - Prostate Cancer Screening Decision Making Module
+•pcpsade1: Why Was PSA Test Done?
+•pcdmdecn: Who Made The Decision With You To Have PSA Test?
+
+
+--------------------------------
+addepev2 - Ever Told You Had A Depressive Disorder
+asthma3 - Ever Told Had Asthma
+bphigh4 - Ever Told Blood Pressure High
+chccopd1 - (Ever Told) You Have (Copd) Chronic Obstructive Pulmonary Disease, Emphysema Or
+chckidny - (Ever Told) You Have Kidney Disease?
+chcocncr - (Ever Told) You Had Any Other Types Of Cancer?
+chcscncr - (Ever Told) You Had Skin Cancer?
+checkup1 - Length Of Time Since Last Routine Checkup
+children - Number Of Children In Household
+ctelenum - Correct Telephone Number?
+cvdcrhd4 - Ever Diagnosed With Angina Or Coronary Heart Disease
+cvdinfr4 - Ever Diagnosed With Heart Attack
+cvdstrk3 - Ever Diagnosed With A Stroke
+diabage2 - Age When Told Diabetic
+diabete3 - (Ever Told) You Have Diabetes
+dispcode - Final Disposition
+dlyother - Delayed Getting Medical Care Other Response
+doctdiab - Times Seen Health Professional For Diabetes
+educa - Education Level
+employ1 - Employment Status
+fc60_ - Estimated Functional Capacity
+fmonth - File Month
+genhlth - General Health
+havarth3 - Told Have Arthritis
+hlthcvrg - Health Insurance Coverage
+hlthpln1 - Have Any Health Care Coverage
+iDate - interview Date
+iday - Interview Day
+imonth - Interview Month
+internet - Internet Use In The Past 30 Days?
+iyear - Interview Year
+marital - Marital Status
+maxvo2_ - Estimated Age-Gender Specific Maximum Oxygen Consumption
+medcost - Could Not See Dr. Because Of Cost
+pa1vigm_ - Minutes Of Total Vigorous Physical Activity Per Week
+persdoc2 - Multiple Health Care Professionals
+qstlang - Language Identifier
+qstver - Questionnaire Version Identifier
+seqno - Annual Sequence Number
+sex - Respondents Sex
+veteran3 - Are you a verteran?
+weight2 - Reported Weight In Pounds
+X_age_g - Imputed Age In Six Groups
+X_age65yr - Reported Age In Two Age Groups Calculated Variable
+X_age80 - Imputed Age Value Collapsed Above 80
+X_ageg5yr - Reported Age In Five-Year Age Categories Calculated Variable
+X_asthms1 - Computed Asthma Status
+X_casthm1 - Current Asthma Calculated Variable
+X_chldcnt - Computed Number Of Children In Household
+X_drdxar1 - Respondents Diagnosed With Arthritis
+X_dualuse - Dual Phone Use Categories
+X_educag - Computed Level Of Education Completed Categories
+X_frt16 - Reported Consuming Fruit >16/Day
+X_frtresp - Missing Any Fruit Responses
+X_fruitex - Fruit Exclusion From Analyses
+X_hispanc - Hispanic, Latino/A, Or Spanish Origin Calculated Variable
+X_imprace - Imputed Race/Ethnicity Value
+X_llcpwt - Final Weight: Land-Line And Cell-Phone Data
+X_llcpwt2 - Truncated Design Weight Used In Adult Combined Land Line And Cell Phone Raking
+X_ltasth1 - Lifetime Asthma Calculated Variable
+X_misfrtn - The Number Of Missing Fruit Responses
+X_misvegn - The Number Of Missing Vegetable Responses
+X_psu - Primary Sampling Unit
+X_rawrake - Raw Weighting Factor Used In Raking
+X_rfhlth - Adults With Good Or Better Health
+X_rfhype5 - High Blood Pressure Calculated Variable
+X_state - State Fips Code
+X_strwt - Stratum Weight
+X_ststr - Sample Design Stratification Variable
+X_veg23 - Reported Consuming Vegetables >23/Day
+X_vegetex - Vegetable Exclusion From Analyses
+X_vegresp - Missing Any Vegetable Responses
+X_wt2rake - Design Weight Used In Raking
+
+

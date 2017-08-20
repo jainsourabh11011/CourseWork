@@ -1,0 +1,514 @@
+---
+title: "Exploring the BRFSS Data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed:  true
+      smooth_scroll: true
+---
+##Introduction
+This document is prepared to fulfill the requirements for Duke's *Statistics with R - Introduction to Probability and Data* Class hosted by Coursera.  
+
+The project consists of 3 parts:
+
+1. **Data**: (3 points) Describe how the observations in the sample are collected, and the implications of this data collection method on the scope of inference (generalizability / causality). 
+2. **Research questions**: (11 points) Develop three research questions that you want to answer using these data. 
+3. **EDA**: (30 points) Perform exploratory data analysis (EDA) that addresses each of the three research questions you outlined above. Each R output and plot should be accompanied by a brief interpretation.
+
+**Note**:  6 points allocated to overall organization and readability of your project. Total points add up to 50 points.
+
+##Load Data
+
+Duke made loading the data easy - we can just load it into the project directly.  I first set my working directory and then load the data.  Let's also take the time to load the required packages for this project.
+
+```{r getRawdata, message=FALSE, warning=FALSE}
+setwd("~/GitHub/IntroToProbability/project")#set the working directory
+if(!exists("brfss2013")) load("./data/brfss2013.RData")#only load the data if it is not already loaded
+
+if(!"dplyr" %in% installed.packages()) install.packages("R.utils")
+  library(dplyr)
+if(!"ggplot2" %in% installed.packages()) install.packages("ggplot2")
+  library(ggplot2)
+if(!"scales" %in% installed.packages()) install.packages("scales")
+  library(scales)
+``` 
+##About BRFSS 
+The Behavioral Risk Factor Surveillance System [(BRFSS)](http://www.cdc.gov/brfss/annual_data/2013/pdf/Overview_2013.pdf) is a collaborative project between all of the states in the United States (US) and participating US territories and the Centers for Disease Control and Prevention (CDC).  The BRFSS was initiated in 1984, with 15 states collecting surveillance data on risk behaviors through monthly telephone interviews. Today, all 50 states, the District of Columbia, Puerto Rico, and Guam collect data annually and American Samoa, Federated States of Micronesia, and Palau collect survey data over a limited point- in-time (usually one to three months). 
+
+The BRFSS objective is to collect uniform, state-specific data on preventive health practices and risk behaviors that are linked to chronic diseases, injuries, and preventable infectious diseases that affect the adult population. 
+
+###BRFSS Data Collection Methodologu
+Surveys are conducted using the following procedure:
+
+- Conduct 20% of the interviews on weekdays
+- Conduct 80% on weeknights and weekends
+- Change schedules to accommodate holidays and special events
+- Make weekday calls just after the dinner hour
+- Make appointment callbacks during hours that are not scheduled for other interviews, generally on weekdays.
+
+###Interesting Sampling Facts
+
+* Landline interviews are held with eligible households. Cellular telephone respondents are weighed as single adult households. An eligible household is defined as a housing unit that has a separate entrance, where occupants eat separately from other persons on the property, and that is occupied by its members as their principal or secondary place of residence. 
+* Landlines use a sampling methodology called disproportionate stratified sampling (DSS).  DSS draws telephone numbers from two strata based on the presumed density of known telephone household numbers.  The strata are defined as either high density or medium density.  Telephone numbers from the high density stratum are sampled at a higher rate. The BRFSS User Guide states **DSS sampling telephone numbers is more efficient than simple random sampling.**
+* Cellular phone participants are randomly selected with each having equal probability of selection.
+* BRFSS recommends at least 4,000 interviews per state per year.  
+* BRFSS uses a weighting process as an important statistical tool that attempts to **remove bias** in the sample.  The weighting protocols ensure the data are representative of the population on the following demographics:  
+    + sex  
+    + age  
+    + race
+    + education
+    + marital status
+    + home ownership
+    + phone ownership
+    + region
+
+###Generalizability
+
+We learned above BRFSS attempts to use random sampling techniques to remove bias from the surveys.  If true, then the results of the surveys should be generalizable to the populations.  If generalizable, results suggest causation.  Causation can only be inferred from a randomized experiment.
+
+For a study to be defined as an experiment the four principles of experimental design must be fulfilled:
+
+1. Control any possible confounders
+2. Randomize into treatment and control groups
+3. Replicate by using a sufficiently large sample or repeating the experiment
+4. Block any variables that might influence the response.  
+
+The BRFSS Data Collection interviewing process is intended to be a random process.  BRFSS has gone to reasonable lengths to reduce bias.  However, often bias cannot be completed eliminated.  For example, in surveys, practitioners must guard against non-response and convenience sampling.
+
+Non-response bias occurs when a low percentage of the randomly sampled respondents respond, they may not represent the views of the population.  Similarly, easily accessed people may provide data inconsistent with the larger population.  Both of these bias types could exist in the BRFSS data - there is no information refuting this possibility.
+
+Also, the number of responses may not be representative. Let's look at the data:
+```{r recordCounts}
+byState <- brfss2013 %>% group_by(X_state) %>% summarize(count_records = n()) %>% arrange(desc(count_records))
+byState_df <- as.data.frame(byState)
+head(byState_df); tail(byState_df)
+```
+We find that Florida has the most records;  Guam has the fewest surveys.  (We'll take care of the bad data - the 0 and 80 - in just a bit.)  In 2013, the population of Florida was 19,317,568.  That means BRFSS surveys covered only 0.17% if the state population.  Similarly, the population of Guam in 2013 was 168,000.  The survey captured 1.1% of the population.  This data suggests that the survey coverage may not be great enough to satisfy the 3rd principle for experimental design.
+
+####BRFSS Sampling Conclusion
+While BRFSS has taken the steps to establish causation through randomization, I do not have confidence all the bias has been removed nor do I believe that sufficiently large samples (or repetition) is available to make conclusions from the data.  At best, associations might be drawn based on data analysis. 
+
+**This conclusion applies to the questions analyzed below.**
+
+##Preview Data
+One of the most important steps in any data analysis is to know the data - really understand it. 
+
+First we'll check the state data to make sure it is clean and tidy.  (State data is critical to the analysis that follows.)
+```{r checkStates}
+unique(brfss2013$X_state)
+```
+X_state values of 0 and 80 do not make sense.  Let's remove them:
+```{r removeBadstates, warning=FALSE, message=FALSE}
+modData <- filter(brfss2013, !X_state == "80"); modData <- filter(modData, !X_state == "0")
+rm(brfss2013)#lets remove this to save on memory
+```
+Let us now create a new column so we can easily identify US States from Puerto Rico and Guam.  I will assign the value 1 to US States,  2 to Puerto Rico and 3 to Guam.  We'll use this additional data in the analysis that follows.
+```{r labelStates}
+modData <- modData %>% mutate(is_State = 1)#label all records as a state
+modData$is_State[modData$X_state=="Guam"] <-3
+modData$is_State[modData$X_state=="Puerto Rico"] <-2
+```
+With any data, we need to evaluate missing data.  Usually a safe maximum threshold is 5% for missing records in large data sets. If missing data for a certain feature or sample is more than 5% then you probably should leave that feature or sample out. I will need to violate this rule below because some variables must be used even though many NAs exist. For now, let's see a summary of the NA count in the data by visualizing the NA count:
+
+```{r countNA, message=FALSE, warning=FALSE}
+countNAs <- apply(modData, 2, function(x) sum(is.na(x)))
+countNAs_df <- as.data.frame(countNAs)#change to data frame
+countNAs_df$cat <- row.names(countNAs_df)#copy row names to its own column (variable)
+options(scipen=999)#prevents scientific notation
+countNAs_df$percentNA <- format(countNAs_df$countNAs/nrow(modData), digits = 2)
+countNAs_df$percentNA <- as.numeric(countNAs_df$percentNA)
+
+plot5 <- ggplot(countNAs_df, aes(x = reorder(cat, -countNAs), y = countNAs), 
+                ylab("NA Count"), xlab("Variable Name")) +
+  geom_bar(stat = "identity") + 
+  theme(axis.ticks = element_blank(), axis.text.y = element_blank()) +
+  scale_y_continuous(labels = comma) + 
+  xlab("Variable Names") + ylab("NA Count") + ggtitle("Count of NAs in Data") + coord_flip()
+plot5
+```
+
+The plot was intentionally designed not to display the variables on the y axis - there are too many of them.  The plot tells me what I want to know - many of the variables have very high numbers of NAs. We need to remove these variables. I'll use the function `na.omit()` when collecting plot data below.
+
+##Research Questions
+
+The questions were developed after reviewing the data available in the working data set.  These are curious questions, not serious analytic ones.  Each one uses variables from the data and compares the finding across three geographies:  US State, Puerto Rico and Guam.  I hope you will find them interesting and thought provoking too. 
+
+Let's see what we can learn!
+
+###Research Question 1
+####Do people that use the Internet drink more alcohol than those that do not use the Internet?
+
+From the working data set, let's identify the variables we might need:
+
+| **Variable Name** | **Description** | **Values** |
+| ----------------- | ------------------------| -------------------------------------|
+| internet | Internet Use In The Past 30 Days? | 1 = Yes; 2 = No |
+| X_rfdrhv4 | Heavy Alcohol Consumption Calculated Variable | 1 = No; 2 = Yes |
+| sex | Respondent's sex | Male = 1; Female = 2 |
+| is_State | US State, Puerto Rico or Guam | 1 = US State; 2 = Guam; 3 = Puerto Rico |
+
+**NOTE**:  X_rfdrhv4 - Heavy drinkers (adult men having more than two drinks per day and adult women having more than one drink per day).  
+
+Let's subset the data to the variables of interest.  We'll also rename *X_rfdrhv4* to *Heavy_Drinker*.
+```{r getQuest1Data}
+variblesQuest1 <- c("internet", "X_rfdrhv4", "is_State", "sex")
+quest1Data <- select(modData, one_of(variblesQuest1))
+quest1Data <- rename(quest1Data, Heavy_Drinker = X_rfdrhv4)
+```
+Time to plot!  First I collect data and then I present the plots.  For this exercise and the ones that follow, I prepare data for the US, Puerto Rico and Guam before displaying the plots.
+```{r quest1Plot1}
+#US Data
+tmpdataUS1 <- quest1Data %>% na.omit() %>% filter(Heavy_Drinker == "Yes", is_State == 1)
+
+cntUS_Males_int <- nrow(tmpdataUS1 %>%  filter(sex=="Male", internet=="Yes"))
+cntUS_Males_no_int <- nrow(tmpdataUS1 %>%  filter(sex=="Male", internet=="No"))
+cntUS_Females_int <- nrow(tmpdataUS1 %>%  filter(sex=="Female", internet=="Yes"))
+cntUS_Females_no_int <- nrow(tmpdataUS1 %>%  filter(sex=="Female", internet=="No"))
+
+cntUS_Males_Total <- (cntUS_Males_int + cntUS_Males_no_int)
+cntUS_Males_int_percent <- percent(cntUS_Males_int/cntUS_Males_Total)
+cntUS_Females_Total <- (cntUS_Females_int + cntUS_Females_no_int)
+cntUS_Females_int_percent <- percent(cntUS_Females_int/cntUS_Females_Total)
+
+#Puerto Rico Data
+tmpdataPR1 <- quest1Data %>% na.omit() %>% group_by(internet) %>% 
+  filter(Heavy_Drinker == "Yes", is_State ==2)
+
+cntPR_Males_int <- nrow(tmpdataPR1 %>%  filter(sex=="Male", internet=="Yes"))
+cntPR_Males_no_int <- nrow(tmpdataPR1 %>%  filter(sex=="Male", internet=="No"))
+cntPR_Females_int <- nrow(tmpdataPR1 %>%  filter(sex=="Female", internet=="Yes"))
+cntPR_Females_no_int <- nrow(tmpdataPR1 %>%  filter(sex=="Female", internet=="No"))
+
+cntPR_Males_Total <- cntPR_Males_int + cntPR_Males_no_int
+cntPR_Males_int_percent <- percent(cntPR_Males_int/cntPR_Males_Total)
+cntPR_Females_Total <- cntPR_Females_int + cntPR_Females_no_int
+cntPR_Females_int_percent <- percent(cntPR_Females_int/cntPR_Females_Total)
+
+#Guam Data
+tmpdataG1 <- quest1Data %>% na.omit() %>% group_by(internet) %>% 
+  filter(Heavy_Drinker == "Yes", is_State ==3)
+
+cntG_Males_int <- nrow(tmpdataG1 %>%  filter(sex=="Male", internet=="Yes"))
+cntG_Males_no_int <- nrow(tmpdataG1 %>%  filter(sex=="Male", internet=="No"))
+cntG_Females_int <- nrow(tmpdataG1 %>%  filter(sex=="Female", internet=="Yes"))
+cntG_Females_no_int <- nrow(tmpdataG1 %>%  filter(sex=="Female", internet=="No"))
+
+cntG_Males_Total <- cntG_Males_int + cntG_Males_no_int
+cntG_Males_int_percent <- percent(cntG_Males_int/cntG_Males_Total)
+cntG_Females_Total <- cntG_Females_int + cntG_Females_no_int
+cntG_Females_int_percent <- percent(cntG_Females_int/cntG_Females_Total)
+
+P1 <- ggplot(data=tmpdataUS1, aes(x=internet, fill=sex)) + geom_bar() + 
+  theme(legend.position="none") + ggtitle("Heavy Drinkers in the US\nInternet Use") +
+  labs(x = "Internet Use", y = "Count of Survey Respondents") +
+  annotate(geom="text", x=1, y=5000, label=paste("Males: ", cntUS_Males_int)) +
+  annotate(geom="text", x=2, y=1600, label=paste("Males: ", cntUS_Males_no_int)) +
+  annotate(geom="text", x=1, y=15000, label=paste("Females: ", cntUS_Females_int)) +
+  annotate(geom="text", x=2, y=3500, label=paste("Females: ", cntUS_Females_no_int))
+
+P2 <- ggplot(data=tmpdataPR1, aes(x=internet, fill=sex)) + geom_bar() + 
+  labs(x = "Internet Use", y = "Count of Survey Respondents") +
+  theme(legend.position="none") + ggtitle("Heavy Drinkers in Puerto Rico\nInternet Use") +
+  annotate(geom="text", x=1, y=30, label=paste("Males: ", cntPR_Males_int)) +
+  annotate(geom="text", x=2, y=25, label=paste("Males: ", cntPR_Males_no_int)) +
+  annotate(geom="text", x=1, y=100, label=paste("Females: ", cntPR_Females_int)) +
+  annotate(geom="text", x=2, y=73, label=paste("Females: ", cntPR_Females_no_int))
+
+P3 <- ggplot(data=tmpdataG1, aes(x=internet, fill=sex)) + geom_bar() + 
+  labs(x = "Internet Use", y = "Count of Survey Respondents") +
+  theme(legend.position="none") + ggtitle("Heavy Drinkers in Guam\nInternet Use") +
+  annotate(geom="text", x=1, y=30, label=paste("Males: ", cntG_Males_int)) +
+  annotate(geom="text", x=2, y=10, label=paste("Males: ", cntG_Males_no_int)) +
+  annotate(geom="text", x=1, y=75, label=paste("Females: ", cntG_Females_int)) +
+  annotate(geom="text", x=2, y=20, label=paste("Females: ", cntG_Females_no_int))
+P1; P2; P3
+```
+
+**Note**:  In addition the the bar plots above, I created a different view using mosaic plots.  I made these only for Question 1.  You can find these additional plots at the end in the Appendix.  Some find mosaic plots more useful; others find them confusing.  I found them fun to create!
+
+###Question 1 Summary:
+
+Territory | Men Total | Men Internet % | Female Total | Female Internet % | 
+--------- | :---------: | :--------------: | :------------: | :-----------------: | 
+| US | `r comma(cntUS_Males_Total)` | `r cntUS_Males_int_percent`  | `r comma(cntUS_Females_Total)` | `r cntUS_Females_int_percent` |
+| Puerto Rico | `r cntPR_Males_Total` | `r cntPR_Males_int_percent` | `r cntPR_Females_Total` | `r cntPR_Females_int_percent` |
+|Guam | `r cntG_Males_Total` | `r cntG_Males_int_percent` | `r cntG_Females_Total` | `r cntG_Females_int_percent` |
+
+Interesting that women that drink in the US, Guam and Puerto Rico all share the same level of Internet use.  With men, the same can be inferred but in Puerto Rico, a smaller percentage of men drink and use the Internet.  I wonder what happens in Puerto Rico that make men avoid the Internet when under the influence?  Interesting. . . .
+
+In each region, it appears that Internet usage and enjoying a drink are complementary activities!
+
+###Research Question 2
+####Are people that eat fruits and vegetables more active than those that do not eat these healthy foods?
+
+Before subsetting the data set, let's evaluate missing data for the variables we are interested in.
+```{r getQuest2Data}
+variblesQuest2 <- c("fruitju1", "fruit1", "fvbeans", "fvgreen", "fvorang",  "vegetab1", "ftjuda1_", "frutda1_", "beanday_", "grenday_", "orngday_", "vegeda1_", "X_frutsum", "X_vegesum", "exerany2", "exeroft1", "exerhmm1", "is_State", "sex")
+
+quest2Data <- select(modData,one_of(variblesQuest2))
+
+countNAs <- apply(quest2Data, 2, function(x) sum(is.na(x)))
+countNAs_df <- as.data.frame(countNAs)#change to data frame
+countNAs_df$cat <- row.names(countNAs_df)#copy row names to its own column (variable)
+options(scipen=999)#prevents scientific notation
+countNAs_df$percentNA <- format(countNAs_df$countNAs/nrow(modData), digits = 2)
+countNAs_df$percentNA <- as.numeric(countNAs_df$percentNA)
+
+plotQuest2NA <- ggplot(countNAs_df, aes(x = reorder(cat, -countNAs), y = countNAs), 
+                ylab("NA Count"), xlab("Variable Name")) +
+  geom_bar(stat = "identity") + 
+  scale_y_continuous(labels = comma) + 
+  xlab("Variable Names") + ylab("NA Count") + ggtitle("Count of NAs in Data") + coord_flip()
+plotQuest2NA
+```
+```{r, echo=FALSE}
+rm(countNAs); rm(countNAs_df)
+```
+There are many missing records.  I need to keep some variables because they are key to the question.  The two variables with the largest number of NAs will be removed from the working data.
+
+```{r removeVars2}
+quest2Data$exeroft1 <- NULL; quest2Data$exerhmm1 <- NULL
+```
+Looking at the remaining variables, the calculated variables `X_frutsum` and `X_vegesum` provide the best sources of data for fruits and vegetables. `exerany2` looks to be the only remaining source for exercise.
+
+Let's look at these a bit closer:
+
+| **Variable Name** | **Description** | **Values** |
+| --------- | ----------------------------- | ----------------------------------------- |
+| X_frutsum | Total Fruits Consumed Per Day | None = 0; 1-9998 = Fruits Consumed |
+| X_vegesum | Total Vegetables Consumed Per Day | None = 0; 1-9998 = Vegetables Consumed |
+| exerany2 | Exercise In Past 30 Days | Yes = 1; No = 2 |
+
+Notes:  
+
+- is_State and sex were previously defined in the first question
+- exerany2 details: During the past month, other than your regular job, did you participate in any physical activities or exercises such as running, calisthenics, golf, gardening, or walking for exercise?
+
+Let's get only the data we need to answer the question.  Below I select the appropriate variables, I remove NAs and then ensure all the records represent ones that either `X_frutsum > 0` or `X_vegesum > 0`.
+
+```{r}
+quest2Data <- quest2Data %>% select(X_frutsum, X_vegesum, exerany2, sex, is_State)
+#Need to filter out any records where either frits or vegetables are not great than 0
+quest2Data <- na.omit(quest2Data)
+quest2Data <- filter(quest2Data, X_frutsum > 0 | X_vegesum > 0)
+```
+We have the data we need - time to plot!
+```{r quest2Plot}
+#US Data
+tmpdataUS2 <- quest2Data %>%  na.omit() %>%  filter(is_State == 1)
+
+cntUS_Males_exer <- nrow(tmpdataUS2 %>%  filter(sex=="Male", exerany2=="Yes"))
+cntUS_Males_exer_no <- nrow(tmpdataUS2 %>%  filter(sex=="Male", exerany2=="No"))
+cntUS_Females_exer <- nrow(tmpdataUS2 %>%  filter(sex=="Female", exerany2=="Yes"))
+cntUS_Females_exer_no <- nrow(tmpdataUS2 %>%  filter(sex=="Female", exerany2=="No"))
+
+cntUS_Males_Total <- (cntUS_Males_exer + cntUS_Males_exer_no)
+cntUS_Males_exer_percent <- percent(cntUS_Males_exer/cntUS_Males_Total)
+cntUS_Females_Total <- (cntUS_Females_exer + cntUS_Females_exer_no)
+cntUS_Females_exer_percent <- percent(cntUS_Females_exer/cntUS_Females_Total)
+
+#Puerto Rico Data
+tmpdataPR2 <- quest2Data %>%  na.omit() %>%  filter(is_State == 2)
+
+cntpr_Males_exer <- nrow(tmpdataPR2 %>%  filter(sex=="Male", exerany2=="Yes"))
+cntpr_Males_exer_no <- nrow(tmpdataPR2 %>%  filter(sex=="Male", exerany2=="No"))
+cntpr_Females_exer <- nrow(tmpdataPR2 %>%  filter(sex=="Female", exerany2=="Yes"))
+cntpr_Females_exer_no <- nrow(tmpdataPR2 %>%  filter(sex=="Female", exerany2=="No"))
+
+cntpr_Males_Total <- cntpr_Males_exer + cntpr_Males_exer_no
+cntpr_Males_exer_percent <- percent(cntpr_Males_exer/cntpr_Males_Total)
+cntpr_Females_Total <- cntpr_Females_exer + cntpr_Females_exer_no
+cntpr_Females_exer_percent <- percent(cntpr_Females_exer/cntpr_Females_Total)
+
+#Guam Data
+tmpdataG2 <- quest2Data %>%  na.omit() %>%  filter(is_State == 3)
+
+cntg_Males_exer <- nrow(tmpdataG2 %>%  filter(sex=="Male", exerany2=="Yes"))
+cntg_Males_exer_no <- nrow(tmpdataG2 %>%  filter(sex=="Male", exerany2=="No"))
+cntg_Females_exer <- nrow(tmpdataG2 %>%  filter(sex=="Female", exerany2=="Yes"))
+cntg_Females_exer_no <- nrow(tmpdataG2 %>%  filter(sex=="Female", exerany2=="No"))
+
+cntg_Males_Total <- cntg_Males_exer + cntg_Males_exer_no
+cntg_Males_exer_percent <- percent(cntg_Males_exer/cntg_Males_Total)
+cntg_Females_Total <- cntg_Females_exer + cntg_Females_exer_no
+cntg_Females_exer_percent <- percent(cntg_Females_exer/cntg_Females_Total)
+
+P4 <- ggplot(data=tmpdataUS2, aes(x=exerany2, fill=sex)) + geom_bar() +
+  labs(x = "Exercise", y = "Count of Survey Respondents") +
+  theme(legend.position="none") + ggtitle("Eating Well & Exercise in US") +
+  annotate(geom="text", x=1, y=67000, label=paste("Males: ", cntUS_Males_exer)) +
+  annotate(geom="text", x=2, y=30000, label=paste("Males: ", cntUS_Males_exer_no)) +
+  annotate(geom="text", x=1, y=250000, label=paste("Females: ", cntUS_Females_exer)) +
+  annotate(geom="text", x=2, y=90000, label=paste("Females: ", cntUS_Females_exer_no))
+
+P5 <- ggplot(data=tmpdataPR2, aes(x=exerany2, fill=sex)) + geom_bar() +
+  labs(x = "Exercise", y = "Count of Survey Respondents") +
+  theme(legend.position="none") + ggtitle("Eating Well & Exercise in Puerto Rico") +
+  annotate(geom="text", x=1, y=600, label=paste("Males: ", cntpr_Males_exer)) +
+  annotate(geom="text", x=2, y=400, label=paste("Males: ", cntpr_Males_exer_no)) +
+  annotate(geom="text", x=1, y=2000, label=paste("Females: ", cntpr_Females_exer)) +
+  annotate(geom="text", x=2, y=2000, label=paste("Females: ", cntpr_Females_exer_no))
+
+P6 <- ggplot(data=tmpdataG2, aes(x=exerany2, fill=sex)) + geom_bar() +
+  labs(x = "Exercise", y = "Count of Survey Respondents") +
+  theme(legend.position="none") + ggtitle("Eating Well & Exercise in Guam") +
+  annotate(geom="text", x=1, y=250, label=paste("Males: ", cntg_Males_exer)) +
+  annotate(geom="text", x=2, y=100, label=paste("Males: ", cntg_Males_exer_no)) +
+  annotate(geom="text", x=1, y=900, label=paste("Females: ", cntg_Females_exer)) +
+  annotate(geom="text", x=2, y=380, label=paste("Females: ", cntg_Females_exer_no))
+P4; P5; P6
+```
+###Question 2 Summary:
+
+Territory | Male Total | Male Exercise % | Female Total | Female Exercise % | 
+--------- | :---------: | :--------------: | :------------: | :-----------------: | 
+| US | `r comma(cntUS_Males_Total)` | `r cntUS_Males_exer_percent`  | `r comma(cntUS_Females_Total)` | `r cntUS_Females_exer_percent` |
+| Puerto Rico | `r comma(cntpr_Males_Total)` | `r cntpr_Males_exer_percent` | `r comma(cntpr_Females_Total)` | `r cntpr_Females_exer_percent` |
+|Guam | `r cntg_Males_Total` | `r cntg_Males_exer_percent` | `r cntg_Females_Total` | `r cntg_Females_exer_percent` |
+
+In the US and Guam, men and women that eat fruits and vegetables exercise as similar percentages.  Again, Puerto Rico suggests a contrast.  Both men and women in Puerto Rico that eat well seem to exercise less than other regions.  Additional analysis would be interesting to determine if all Puerto Ricans exercise less.  Perhaps an analysis for a future assignment!
+
+Similar to the first question, the US and Guam seem to follow similar behaviors.
+
+###Research Question 3
+####Are people less prone to depression or anxiety if they exercise?
+
+Before subsetting the data set, let's evaluate missing data for the variables we are interested in.
+```{r getQuest3Data}
+variblesQuest3 <- c("menthlth", "poorhlth", "decide", "diffalon", "misnowrk",  "mistmnt",  "exerany2", "exeroft1", "exerhmm1", "is_State", "sex")
+
+quest3Data <- select(modData,one_of(variblesQuest3))
+
+countNAs <- apply(quest3Data, 2, function(x) sum(is.na(x)))
+countNAs_df <- as.data.frame(countNAs)#change to data frame
+countNAs_df$cat <- row.names(countNAs_df)#copy row names to its own column (variable)
+options(scipen=999)#prevents scientific notation
+countNAs_df$percentNA <- format(countNAs_df$countNAs/nrow(modData), digits = 2)
+countNAs_df$percentNA <- as.numeric(countNAs_df$percentNA)
+
+plotQuest3NA <- ggplot(countNAs_df, aes(x = reorder(cat, -countNAs), y = countNAs), 
+                ylab("NA Count"), xlab("Variable Name")) +
+  geom_bar(stat = "identity") + 
+  scale_y_continuous(labels = comma) + 
+  xlab("Variable Names") + ylab("NA Count") + ggtitle("Count of NAs in Data") + coord_flip()
+plotQuest3NA
+```
+
+There are many missing records.  I need to keep some variables because they are key to the question.  The two variables with the largest number of NAs will be removed from the working data.  There is simply insufficient data to draw any reasonable conclusions.
+```{r removeVar3}
+quest3Data$misnowrk <- NULL; quest3Data$mistmnt <- NULL
+```
+Let's look at these a bit closer:
+
+| **Variable Name** | **Description** | **Values** |
+| -------- | ----------------------------------------- | ------------------------------ |
+| menthlth | Number Of Days Mental Health Not Good past 30 days | None = 0; 1-30 = Bad Days |
+| poorhlth | days physical/mental health prevented usual activities | None = 0; 1-30 = Bad Days |
+| decide | Difficulty Concentrating Or Remembering | Yes = 1; No = 2 |
+| diffalon | Difficulty Doing Errands Alone | Yes = 1; No = 2 |
+| exerany2 | Exercise In Past 30 Days | Yes = 1; No = 2 |
+
+Looking at the remaining variables, only menthlth and decide are the only mental health impairment not combined with other ailments.
+```{r}
+quest3Data <- quest3Data %>% select(menthlth, decide, exerany2, sex, is_State)
+```
+It would be helpful to create a new column as a Boolean to identify if `menthlth > 0`.
+```{r quest3DataNewCol}
+quest3Data <- quest3Data %>% mutate(menthlth_YN = ifelse(menthlth > 0, "Yes", "No"))
+sample_n(quest3Data, 6)
+```
+We have the data we need - time to plot!
+```{r quest3Plot}
+#US Data
+tmpdataUS3 <- quest3Data %>%  na.omit() %>% filter(is_State == 1)
+
+cntUS_Exer_Ment <- nrow(tmpdataUS3 %>%  filter(exerany2=="Yes", menthlth_YN == "Yes"))
+cntUS_Exer_Ment_No <- nrow(tmpdataUS3 %>%  filter(exerany2=="Yes", menthlth_YN == "No"))
+cntUS_exer_No_Ment <- nrow(tmpdataUS3 %>%  filter(exerany2=="No", menthlth_YN == "Yes"))
+cntUS_exer_No_Ment_No <- nrow(tmpdataUS3 %>%  filter(exerany2=="No", menthlth_YN == "No"))
+
+cntUS_Exer_Total <- (cntUS_Exer_Ment + cntUS_Exer_Ment_No)
+cntUS_Exer_Ment_percent <- percent(cntUS_Exer_Ment/cntUS_Exer_Total)
+cntUS_Exer_No_Total <- (cntUS_exer_No_Ment + cntUS_exer_No_Ment_No)
+cntUS_Exer_No_Ment_percent <- percent(cntUS_exer_No_Ment/cntUS_Exer_No_Total)
+
+#Puerto Rico Data
+tmpdataPR3 <- quest3Data %>%  na.omit() %>%  filter(is_State == 2)
+
+cntpr_Exer_Ment <- nrow(tmpdataPR3 %>%  filter(exerany2=="Yes", menthlth_YN == "Yes"))
+cntpr_Exer_Ment_No <- nrow(tmpdataPR3 %>%  filter(exerany2=="Yes", menthlth_YN == "No"))
+cntpr_exer_No_Ment <- nrow(tmpdataPR3 %>%  filter(exerany2=="No", menthlth_YN == "Yes"))
+cntpr_exer_No_Ment_No <- nrow(tmpdataPR3 %>%  filter(exerany2=="No", menthlth_YN == "No"))
+
+cntpr_Exer_Total <- (cntpr_Exer_Ment + cntpr_Exer_Ment_No)
+cntpr_Exer_Ment_percent <- percent(cntpr_Exer_Ment/cntpr_Exer_Total)
+cntpr_Exer_No_Total <- cntpr_exer_No_Ment + cntpr_exer_No_Ment_No
+cntpr_Exer_No_Ment_percent <- percent(cntpr_exer_No_Ment/cntpr_Exer_No_Total)
+
+#Guam Data
+tmpdataG3 <- quest3Data %>%  na.omit() %>%  filter(is_State == 3)
+
+cntg_Exer_Ment <- nrow(tmpdataG3 %>%  filter(exerany2=="Yes", menthlth_YN == "Yes"))
+cntg_Exer_Ment_No <- nrow(tmpdataG3 %>%  filter(exerany2=="Yes", menthlth_YN == "No"))
+cntg_exer_No_Ment <- nrow(tmpdataG3 %>%  filter(exerany2=="No", menthlth_YN == "Yes"))
+cntg_exer_No_Ment_No <- nrow(tmpdataG3 %>%  filter(exerany2=="No", menthlth_YN == "No"))
+
+cntg_Exer_Total <- (cntg_Exer_Ment + cntg_Exer_Ment_No)
+cntg_Exer_Ment_percent <- percent(cntg_Exer_Ment/cntg_Exer_Total)
+cntg_Exer_No_Total <- cntg_exer_No_Ment + cntg_exer_No_Ment_No
+cntg_Exer_No_Ment_percent <- percent(cntg_exer_No_Ment/cntg_Exer_No_Total)
+
+P7 <- ggplot(data=tmpdataUS3, aes(x=exerany2, fill=menthlth_YN)) + geom_bar() +
+  labs(x = "Exercise", y = "Count of Survey Respondents") +
+  theme(legend.position="none") + ggtitle("MentalHealth & Exercise in US") +
+  annotate(geom="text", x=1, y=270000, label=paste("Mental Issues: ", cntUS_Exer_Ment)) +
+  annotate(geom="text", x=1, y=120000, label=paste("No Issues: ", cntUS_Exer_Ment_No)) +
+  annotate(geom="text", x=2, y=50000, label=paste("No Issues: ", cntUS_exer_No_Ment_No)) +
+  annotate(geom="text", x=2, y=100000, label=paste("Mental Issues: ", cntUS_exer_No_Ment))
+
+P8 <- ggplot(data=tmpdataPR3, aes(x=exerany2, fill=menthlth_YN)) + geom_bar() +
+  labs(x = "Exercise", y = "Count of Survey Respondents") +
+  theme(legend.position="none") + ggtitle("MentalHealth & Exercise in Puerto Rico") +
+  annotate(geom="text", x=1, y=2650, label=paste("Mental Issues: ", cntpr_Exer_Ment)) +
+  annotate(geom="text", x=1, y=1000, label=paste("No Issues: ", cntpr_Exer_Ment_No)) +
+  annotate(geom="text", x=2, y=1000, label=paste("No Issues: ", cntpr_exer_No_Ment_No)) +
+  annotate(geom="text", x=2, y=2500, label=paste("Mental Issues: ", cntpr_exer_No_Ment))
+
+P9 <- ggplot(data=tmpdataG3, aes(x=exerany2, fill=menthlth_YN)) + geom_bar() +
+  labs(x = "Exercise", y = "Count of Survey Respondents") +
+  theme(legend.position="none") + ggtitle("MentalHealth & Exercise in Guam") +
+  annotate(geom="text", x=1, y=1050, label=paste("Mental Issues: ", cntg_Exer_Ment)) +
+  annotate(geom="text", x=1, y=400, label=paste("No Issues: ", cntg_Exer_Ment_No)) +
+  annotate(geom="text", x=2, y=180, label=paste("No Issues: ", cntg_exer_No_Ment_No)) +
+  annotate(geom="text", x=2, y=400, label=paste("Mental Issues: ", cntg_exer_No_Ment_No))
+P7; P8; P9
+```
+
+###Question 3 Summary:
+
+Territory | Exercise Total | Exercise w Mental % | No Exercise Total | No Exercise w Mental % | 
+--------- | :---------: | :--------------: | :------------: | :-----------------: | 
+| US | `r comma(cntUS_Exer_Total)` | `r cntUS_Exer_Ment_percent`  | `r comma(cntUS_Exer_No_Total)` | `r cntUS_Exer_No_Ment_percent` |
+| Puerto Rico | `r comma(cntpr_Exer_Total)` | `r cntpr_Exer_Ment_percent` | `r cntpr_exer_No_Ment` | `r cntpr_Exer_No_Ment_percent` |
+|Guam | `r cntg_Exer_Total` | `r cntg_Exer_Ment_percent` | `r cntg_Exer_No_Total` | `r cntg_Exer_No_Ment_percent` |
+
+One consistent trend appears to be that people in all regions that do not exercise seem to have elevated chances of suffering from some level of mental challenges.  Again, Puerto Rico suggests some difference compared to the US and Guam.  Across the board, the likelihood of mental impairment seems to be less frequent in Puerto Rico than the other regions.
+
+Really interesting that the Puerto Rican population provides contracts in all the analysis compared to the US and Guam.  Again, I find this curious, do you?
+
+##Appendix
+Bar plots are easy to understand.  Other, more advanced plotting provides different visualizations that can sometimes be helpful.  I have provided examples below related to the plots provided for the first question  (Internet Use & Drinking).  Perhaps you will find these interesting.
+
+```{r mosaicPlots, warning=FALSE, message=FALSE, echo=FALSE, results="hide"}
+#The plots are shown in the Appendix
+library(vcd)
+P10 <- mosaic(~sex +internet + Heavy_Drinker, data = tmpdataUS1, shade=TRUE)
+P11 <- mosaic(~sex +internet + Heavy_Drinker, data = tmpdataPR1, shade=TRUE)
+P12 <- mosaic(~sex +internet + Heavy_Drinker, data = tmpdataG1, shade=TRUE)
+P10; P11; P12
+```

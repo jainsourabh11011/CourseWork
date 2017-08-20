@@ -1,0 +1,124 @@
+---
+title: "Hierarchial Clustering in R"
+output: html_document
+---
+
+##K Mean Clustering
+
+###What is K Means Clustering?
+
+K Means Clustering is an unsupervised learning algorithm that tries to cluster data based on their similarity. Unsupervised learning means that there is no outcome to be predicted, and the algorithm just tries to find patterns in the data. In k means clustering, we have to specify the number of clusters we want the data to be grouped into. The algorithm randomly assigns each observation to a cluster, and finds the centroid of each cluster. Then, the algorithm iterates through two steps:
+
+- Reassign data points to the cluster whose centroid is closest.
+- Calculate new centroid of each cluster.
+
+These two steps are repeated till the within cluster variation cannot be reduced any further. The within cluster variation is calculated as the sum of the euclidean distance between the data points and their respective cluster centroids. 
+
+###Exploring the data
+
+The iris dataset contains data about sepal length, sepal width, petal length, and petal width of flowers of different species. Let us see what it looks like:
+```{r}
+library(datasets)
+head(iris)
+```
+
+After a little bit of exploration, I found that Petal.Length and Petal.Width were similar among the same species but varied considerably between different species, as demonstrated below:
+```{r}
+library(ggplot2)
+ggplot(iris, aes(Petal.Length, Petal.Width, color = Species)) + geom_point()
+
+```
+
+###Clustering
+
+Okay, now that we have seen the data, let us try to cluster it. Since the initial cluster assignments are random, let us set the seed to ensure reproducibility.
+```{r}
+set.seed(20)
+irisCluster <- kmeans(iris[, 3:4], 3, nstart = 20)
+irisCluster
+```
+
+Since we know that there are 3 species involved, we ask the algorithm to group the data into 3 clusters, and since the starting assignments are random, we specify nstart = 20. This means that R will try 20 different random starting assignments and then select the one with the lowest within cluster variation.
+
+We can see the cluster centroids, the clusters that each data point was assigned to, and the within cluster variation. 
+
+Let us compare the clusters with the species.
+```{r}
+table(irisCluster$cluster, iris$Species)
+```
+
+As we can see, the data belonging to the setosa species got grouped into cluster 3, versicolor into cluster 2, and virginica into cluster 1. The algorithm wrongly classified two data points belonging to versicolor and six data points belonging to virginica.
+
+We can also plot the data to see the clusters:
+```{r}
+irisCluster$cluster <- as.factor(irisCluster$cluster)
+ggplot(iris, aes(Petal.Length, Petal.Width, color = irisCluster$cluster)) + geom_point()
+```
+
+##What is hierarchical clustering?
+
+If you recall from the post above about k means clustering, it requires us to specify the number of clusters, and finding the optimal number of clusters can often be hard. Hierarchical clustering is an alternative approach which builds a hierarchy from the bottom-up, and doesn’t require us to specify the number of clusters beforehand.
+
+The algorithm works as follows:
+- Put each data point in its own cluster.
+- Identify the closest two clusters and combine them into one cluster.
+- Repeat the above step till all the data points are in a single cluster.
+
+Once this is done, it is usually represented by a dendrogram like structure.
+
+There are a few ways to determine how close two clusters are:
+
+- Complete linkage clustering: Find the maximum possible distance between points belonging to two different clusters.
+- Single linkage clustering: Find the minimum possible distance between points belonging to two different clusters.
+- Mean linkage clustering: Find all possible pairwise distances for points belonging to two different clusters and then calculate the average.
+- Centroid linkage clustering: Find the centroid of each cluster and calculate the distance between centroids of two clusters.
+
+Complete linkage and mean linkage clustering are the ones used most often.
+
+##Clustering
+
+There are 3 different species of flowers.
+
+Let us see how well the hierarchical clustering algorithm can do. We can use hclust for this. hclust requires us to provide the data in the form of a distance matrix. We can do this by using dist. By default, the complete linkage method is used.
+```{r}
+clusters <- hclust(dist(iris[, 3:4]))
+plot(clusters)
+```
+
+We can see from the figure that the best choices for total number of clusters are either 3 or 4.
+ 
+To do this, we can cut off the tree at the desired number of clusters using cutree.
+```{r}
+clusterCut <- cutree(clusters, 3)
+```
+Now, let us compare it with the original species.
+```{r}
+table(clusterCut, iris$Species)
+```
+
+It looks like the algorithm successfully classified all the flowers of species setosa into cluster 1, and virginica into cluster 2, but had trouble with versicolor. If you look at the original plot showing the different species, you can understand why: 
+
+Let us see if we can better by using a different linkage method. This time, we will use the mean linkage method:
+```{r}
+clusters <- hclust(dist(iris[, 3:4]), method = 'average')
+plot(clusters)
+```
+which gives us the following dendrogram:
+ 
+We can see that the two best choices for number of clusters are either 3 or 5. Let us use cutree to bring it down to 3 clusters.
+```{r}
+clusterCut <- cutree(clusters, 3)
+table(clusterCut, iris$Species)
+```
+
+We can see that this time, the algorithm did a much better job of clustering the data, only going wrong with 6 of the data points.
+
+We can plot it as follows to compare it with the original data:
+```{r}
+ggplot(iris, aes(Petal.Length, Petal.Width, color = iris$Species)) + 
+  geom_point(alpha = 0.4, size = 3.5) + geom_point(col = clusterCut) + 
+  scale_color_manual(values = c('black', 'red', 'green'))
+```
+
+All the points where the inner color doesn’t match the outer color are the ones which were clustered incorrectly.
+

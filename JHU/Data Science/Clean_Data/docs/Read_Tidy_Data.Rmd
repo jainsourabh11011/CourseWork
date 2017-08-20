@@ -1,0 +1,16 @@
+---
+title: "REad_Tidy_Data"
+author: "Cliff Weaver"
+date: "Sunday, June 14, 2015"
+output: html_document
+---
+
+* Tidy dataset file tidyData.txt
+
+To view the data in R, use the following code:
+````
+address<-"https://s3.amazonaws.com/coursera-uploads/user-387751591c2a5e160aea6373/973502/asst-3/5922f6900ef811e5a3269be689cef053.txt"
+address <- sub("^https", "http", address)
+data <- read.table(url(address), header = TRUE) 
+View(data)
+````

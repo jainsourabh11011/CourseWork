@@ -1,0 +1,568 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed:  true
+      smooth_scroll: true
+---
+#Introduction
+This document is prepared to fulfill the requirements for Duke's *Statistics with R* Class hosted by Coursera.  A data set is provided for the assignment - Behavioral Risk Factor Surveillance System (BRFSS).
+
+The project consists of 3 parts:
+
+1. **Data**: (3 points) Describe how the observations in the sample are collected, and the implications of this data collection method on the scope of inference (generalizability / causality). Note that you will need to look into documentation on the BRFSS to answer this question. See http://www.cdc.gov/brfss/ 
+2. **Research questions**: (11 points) Come up with at least three research questions that you want to answer using these data. You should phrase your research questions in a way that matches up with the scope of inference your data set allows for. Make sure that at least two of these questions involve at least three variables. You are welcomed to create new variables based on existing ones. With each question include a brief discussion (1-2 sentences) as to why this question is of interest to you and/or your audience.
+3. **EDA**: (30 points) Perform exploratory data analysis (EDA) that addresses each of the three research questions you outlined above. Your EDA should contain numerical summaries and visualizations. Each R output and plot should be accompanied by a brief interpretation.
+
+**Note**:  6 points allocated to overall organization and readability of your project. Total points add up to 50 points.
+
+##About BRFSS 
+The [Behavioral Risk Factor Surveillance System (BRFSS)](http://www.cdc.gov/brfss/annual_data/2013/pdf/Overview_2013.pdf) is a collaborative project between all of the states in the United States (US) and participating US territories and the Centers for Disease Control and Prevention (CDC).  The BRFSS was initiated in 1984, with 15 states collecting surveillance data on risk behaviors through monthly telephone interviews. Over time, the number of states participating in the survey increased; by 2001, 50 states, the District of Columbia, Puerto Rico, Guam, and the US Virgin Islands were participating in the BRFSS.  Today, all 50 states, the District of Columbia, Puerto Rico, and Guam collect data annually and American Samoa, Federated States of Micronesia, and Palau collect survey data over a limited point- in-time (usually one to three months). 
+
+The BRFSS objective is to collect uniform, state-specific data on preventive health practices and risk behaviors that are linked to chronic diseases, injuries, and preventable infectious diseases that affect the adult population. 
+
+Sample Description In a telephone survey such as the BRFSS, a sample record is one telephone number in the list of all telephone numbers the system randomly selects for dialing. To meet the BRFSS standard for the participating states' sample designs, one must be able to justify sample records as a probability sample of all households with telephones in the state. All participating areas met this criterion in 2013. Fifty-one projects used a disproportionate stratified sample (DSS) design for their landline samples. Guam and Puerto Rico used a simple random-sample design. 
+
+##BRFSS Data Collection
+Tee information below is referenced from the [BRFSS User Guide](http://www.cdc.gov/brfss/data_documentation/pdf/userguidejune2013.pdf)
+States are responsible to execute the interviewing process.  States may opt to contract with a private company or university to conduct interviews or conduct interviews internally, but regardless of who conducts data collection, it is done according to BRFSS protocols.  Surveys are conducted using the following procedure:
+
+- Conduct 20% of the interviews on weekdays
+- Conduct 80% on weeknights and weekends
+- Change schedules to accommodate holidays and special events
+- Make weekday calls just after the dinner hour
+- Make appointment callbacks during hours that are not scheduled for other interviews, generally on weekdays.
+
+###Interesting Sampling Facts
+
+- Landline interviews are held with eligible households. Cellular telephone respondents are weighed as single adult households.*An eligible household is defined as a housing unit that has a separate entrance, where occupants eat separately from other persons on the property, and that is occupied by its members as their principal or secondary place of residence. The following are non-eligible households: vacation homes not occupied by household members for more than 30 days per year, group homes, institutions, and (in the landline sample) households in states other than the one conducting the particular BRFSS questionnaire. Since 2011, adult students living in college housing were included as eligible respondents.*
+- Landlines use a sampling methodology called disproportionate stratified sampling (DSS).  DSS draws telephone numbers from two strata based on the presumed density of known telephone household numbers.  The strata are defined as either high density or medium density.  Telephone numbers from the high density stratum are sampled at a higher rate. The BRFSS User Guide states **DSS sampling telephone numbers is more efficient than simple random sampling.**
+- Cellular phone participants are randomly selected with each having equal probability of selection.
+- BRFSS recommends at least 4,000 interviews per state per year.
+- BRFSS uses a weighting process as an important statistical tool that attempts to remove bias in the sample.  The weighting protocols ensure the data are representative of the population on the following demographics:
+  + sex
+  + age
+  + race
+  + education
+  + marital status
+  + home ownership
+  + phone ownership
+  + region
+
+##Get Data 
+
+Let's first get the data.  Duke made it pretty easy - it is really an RData file so we can just load it into the project directly.  I first set my working directory and then load the data.
+
+```{r getRawdata}
+setwd("~/GitHub/IntroToProbability/project")#set the working directory
+if(!exists("brfss2013")) load("./data/brfss2013.RData")#only load the data if it is not already loaded
+```
+
+Some [important notes](http://www.cdc.gov/brfss/annual_data/2013/pdf/CODEBOOK13_LLCP.pdf) about the data:
+
+- All missing values are coded NA in the R Workspace.
+- Many variables, such as age, race, education, as well as variables that measure counts of events (drinks, times eating fruit, etc.) have alternate versions in the Calculated Variables section of the data set. Review this section prior to choosing variables for analysis.
+
+Let's get only the data we need.  I know I want to look at data between the US States and the US Territories.
+
+The BRFSS was initiated in 1984, with 15 states collecting surveillance data on risk behaviors through monthly telephone interviews. Over time, the number of states participating in the survey increased; by 2001, 50 states, the District of Columbia, Puerto Rico, Guam, and the US Virgin Islands were participating in the BRFSS. Today, all 50 states, the District of Columbia, **Puerto Rico**, and **Guam** collect data annually and American Samoa, Federated States of Micronesia, and Palau collect survey data over a limited point- in-time (usually one to three months). 
+
+Let's add a new column to the data (like we more than the 330 we already have) to identify if the observation is from a US State, i.e., not either Puerto Rico or Guam.  This will take a few steps to complete:
+
+Let's check the state data first to make sure it is clean and tidy.
+```{r checkStates}
+#Before assigning a new column for US State v Not US State, let's make sure the state data looks clean:
+unique(brfss2013$X_state)
+```
+
+X_state values of 0 and 80 do not make sense.  Let's remove them:
+```{r removeBadstates, warning=FALSE, message=FALSE}
+library(dplyr)#needed to use the filter function below
+modData <- filter(brfss2013, !X_state == "80"); modData <- filter(modData, !X_state == "0")
+rm(brfss2013)#lets remove this to save on memory
+```
+Let us now create a new column so we can easily identify US States from Puerto Rico and Guam.  I will assign the value 1 to US States and the value 2 to Puerto Rico and 3 to Guam:
+```{r labelStates}
+modData <- modData %>% mutate(is_State = 1)#label all records as a state
+modData$is_State[modData$X_state=="Guam"] <-3
+modData$is_State[modData$X_state=="Puerto Rico"] <-2
+```
+Usually a safe maximum threshold is 5% of the total for large data sets. If missing data for a certain feature or sample is more than 5% then you probably should leave that feature or sample out. While this is a good general rule, some of the exploratory questions I pose below require the number of men and women to be included in the data.  Therefore, I will keep all variables where the percent of NAs is less than 30%.
+
+Let's try visualizing the missing data.  First we need to identify all the NAs.
+```{r countNA, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(scales)
+countNAs <- apply(modData, 2, function(x) sum(is.na(x)))
+countNAs_df <- as.data.frame(countNAs)#change to data frame
+countNAs_df$cat <- row.names(countNAs_df)#copy row names to its own column (variable)
+options(scipen=999)#prevents scientific notation
+countNAs_df$percentNA <- format(countNAs_df$countNAs/nrow(modData), digits = 2)
+countNAs_df$percentNA <- as.numeric(countNAs_df$percentNA)
+
+plot5 <- ggplot(countNAs_df, aes(x = reorder(cat, -countNAs), y = countNAs), 
+                ylab("NA Count"), xlab("Variable Name")) +
+  geom_bar(stat = "identity") + 
+  theme(axis.ticks = element_blank(), axis.text.y = element_blank()) +
+  scale_y_continuous(labels = comma) + 
+  xlab("Variable Names") + ylab("NA Count") + ggtitle("Count of NAs in Data") + coord_flip()
+plot5
+```
+The plot was intentionally designed not to display the variables on the y axis - there are too many of them.  The plot does tell me what I want to know - many of the variables have very high numbers of NAs. We need to remove these variables.  Too many NAs may provide unreliable associations.
+
+```{r removeExcessiveNAs}
+#Will set a varible to serve as a cuttoff of data based on the pecent of NAs
+cutoffValue = as.numeric(.3)
+varibleNames <-countNAs_df %>% filter(percentNA<cutoffValue)
+```
+Here is a sampling of the variables that have less than 30% NAs.  There several variables of no interest.  
+
+Here is an example of a variable that is not interesting:
+**X_misvegn**
+```{r X_misvegn}
+unique(modData$X_misvegn)
+```
+A full list of the variables is presented in the appendix.
+
+The variables in <font color="red">red</font> will be deleted from the working data set.
+
+- addepev2 - Ever Told You Had A Depressive Disorder
+- checkup1 - Length Of Time Since Last Routine Checkup
+- children - Number Of Children In Household
+- <font color="red">ctelenum</font> - Correct Telephone Number?
+- cvdcrhd4 - Ever Diagnosed With Angina Or Coronary Heart Disease
+- cvdstrk3 - Ever Diagnosed With A Stroke
+- diabage2 - Age When Told Diabetic
+- <font color="red">dispcode</font> - Final Disposition
+- dlyother - Delayed Getting Medical Care Other Response
+- educa - Education Level
+- employ1 - Employment Status
+- fc60_ - Estimated Functional Capacity
+- <font color="red">fmonth</font> - File Month
+- genhlth - General Health
+- havarth3 - Told Have Arthritis
+- hlthcvrg - Health Insurance Coverage
+- <font color="red">iday</font> - Interview Day
+- <font color="red">imonth</font> - Interview Month
+- internet - Internet Use In The Past 30 Days?
+- <font color="red">qstver</font> - Questionnaire Version Identifier
+- <font color="red">seqno</font> - Annual Sequence Number
+- sex - Respondents Sex
+- X_fruitex - Fruit Exclusion From Analyses
+- X_hispanc - Hispanic, Latino/A, Or Spanish Origin Calculated Variable
+- X_imprace - Imputed Race/Ethnicity Value
+- <font color="red">X_llcpwt</font> - Final Weight: Land-Line And Cell-Phone Data
+- <font color="red">X_llcpwt2</font> - Truncated Design Weight Used In Adult Combined Land Line And Cell Phone Raking
+- <font color="red">X_wt2rake</font> - Design Weight Used In Raking
+```{r getVariables}
+#Lets save the varible names to use them to filter only the data we want
+
+variablesIwant <- c("X_state","is_State", "addepev2", "alcday5", "asthma3", "beanday_", "bloodcho", "bphigh4", "chccopd1", "chckidny", "chcocncr", "chcscncr", "checkup1", "children","cholchk",  "cvdcrhd4", "cvdinfr4", "cvdstrk3", "decide", "diffalon","diffdres", "diffwalk", "doctdiab", "drnkany5", "drocdy3_", "educa", "employ1", "exerany2", "fc60_", "flushot6", "fruit1", "fruitju1", "frutda1_", "ftjuda1_", "fvbeans", "fvgreen", "fvorang", "genhlth", "grenday_", "havarth3", "height3","hivtst6", "hlthcvrg", "hlthpln1","income2", "is_State", "internet", "iyear", "marital", "medbills", "medcost", "medscost", "menthlth", "numadult", "nummen", "numwomen", "orngday_", "pa1vigm_", "persdoc2", "physhlth", "pneuvac3", "pvtresd1", "qlactlm2", "qstlang", "renthom1", "seatbelt", "sex", "sleptim1", "smoke100", "tetanus", "toldhi2", "useequip", "usenow3", "vegeda1_", "vegetab1", "veteran3", "weight2", "X_age80", "X_aidtst3", "X_asthms1", "X_casthm1", "X_chldcnt", "X_cholchk", "X_drdxar1", "X_drnkdy4", "X_drnkmo4",  "X_educag", "X_frtlt1", "X_frutsum", "X_imprace", "X_incomg", "X_lmtact1","X_lmtscl1", "X_lmtwrk1", "X_ltasth1", "X_misfrtn", "X_misvegn", "X_pa150r2", "X_pa30021", "X_pa300r2", "X_pacat1", "X_pastae1", "X_rfbing5",  "X_rfbmi5", "X_rfchol", "X_rfdrhv4", "X_rfhlth", "X_rfhype5", "X_rfseat2", "X_rfseat3", "X_rfsmok3", "X_smoker3", "X_totinda", "X_veg23", "X_vegesum", "X_veglt1")
+
+workingData <- select(modData,one_of(variablesIwant))#new option for me in dplyr - useful
+```
+We have the varibles that we want but the names of the variables can be cryptic.  Let's rename the variables to something that is easier to interpret.
+```{r reName}
+#Rename with dplyr
+workingData <- rename(workingData,  
+                  US_State = X_state,
+                  Is_US_State = is_State,
+                  Year = iyear, 
+                  AlcoholDays_Past_30 = alcday5, 
+                  Heavy_Alcohol_Calc = X_rfdrhv4,
+                  Beans_Day = beanday_, 
+                  Cholesteral_Check = bloodcho, 
+                  Last_Cholesteral_Chk = cholchk, 
+                  Number_Adults = numadult, 
+                  Number_Men = nummen, 
+                  Number_Women = numwomen, 
+                  General_Health = genhlth, 
+                  Phys_Not_OK =  physhlth, 
+                  Mental_Not_OK = menthlth, 
+                  Sleep_Hrs = sleptim1, 
+                  Depress_Disorder = addepev2, 
+                  Education = educa, 
+                  Weight = weight2, 
+                  Exercise_Past30 = exerany2, 
+                  Asthma = asthma3, 
+                  High_BP = bphigh4, 
+                  COPD = chccopd1, 
+                  Kidney_Disease = chckidny, 
+                  Other_Cancer = chcocncr, 
+                  Skin_Cancer = chcscncr, 
+                  Last_Checkup = checkup1, 
+                  Concentration = decide, 
+                  No_Children = children, 
+                  Heart_Disease = cvdcrhd4, 
+                  Heart_Attack = cvdinfr4, 
+                  Stroke = cvdstrk3, 
+                  Difficulty_Errands = diffalon, 
+                  Difficult_Dressing = diffdres, 
+                  Difficult_Walk = diffwalk, 
+                  Alcohol_Past_30 = drnkany5, 
+                  Computed_Drinks_Day = drocdy3_, 
+                  Doc_Visits_Diabetes = doctdiab, 
+                  Employment = employ1, 
+                  Functional_Cap = fc60_, 
+                  Arthritis = havarth3, 
+                  Flu_Shot_12M = flushot6, 
+                  Times_Eat_Fruit = fruit1, 
+                  Drink_Fruit_Juice = fruitju1, 
+                  Computed_Fruit_Day = frutda1_, 
+                  Fruit_Juice_Times_Day = ftjuda1_, 
+                  Times_EatBeans = fvbeans, 
+                  Times_Eat_Greens = fvgreen, 
+                  Times_Eat_Orange = fvorang, 
+                  Computed_OrangePer_Day = orngday_, 
+                  Computed_GreensIn_Day = grenday_, 
+                  Height = height3, 
+                  HIV_Tested = hivtst6, 
+                  Health_Ins = hlthcvrg, 
+                  Any_Health_Cov = hlthpln1, 
+                  Income = income2, 
+                  Internet_Past_30 = internet, 
+                  Marital_Status = marital, 
+                  Have_Med_Bills =  medbills, 
+                  Dr_Cost_Too_Much = medcost, 
+                  Meds_Too_Expensive = medscost, 
+                  Vigorous_Activity = pa1vigm_, 
+                  Multiple_Docs = persdoc2, 
+                  Pneumonioa_Ever =  pneuvac3, 
+                  Private_Home = pvtresd1, 
+                  Activity_Lim_dBy_Health = qlactlm2, 
+                  Language_ID = qstlang, 
+                  Own_Rent  = renthom1, 
+                  Freq_Use_Seatbelt = seatbelt, 
+                  Sex = sex, 
+                  Smoke_100 = smoke100, 
+                  Tentanus_2005 = tetanus, 
+                  Told_Hi_Cholesterol = toldhi2, 
+                  Health_Sp_Equip = useequip, 
+                  Smokeless_Tabacco = usenow3, 
+                  Computed_Veg_Per_Day = vegeda1_, 
+                  Verteran = veteran3, 
+                  Weight = weight2, 
+                  Age_Group_80 = X_age80, 
+                  Asthma_Status = X_asthms1, 
+                  Diagnosed_Arthritis = X_drdxar1, 
+                  Computed_Drinks_Per_Day = X_drnkdy4, 
+                  Drinks_Per_Month = X_drnkmo4, 
+                  Computed_Educ = X_educag, 
+                  Imputed_Ethnicity = X_imprace, 
+                  Adults_Good_Health = X_rfhlth,
+                  AIDS_Tested = X_aidtst3,
+                  Asthma_Calc_Variable = X_casthm1,
+                  Children_Calc = X_chldcnt,
+                  Cholesterol_Calc = X_cholchk,
+                  Fruit_1orMore_Day = X_frtlt1,
+                  Fruit_Total_Day = X_frutsum,
+                  Income_Calc = X_incomg,
+                  Limited_Usual_Act = X_lmtact1,
+                  Limited_Social_Act = X_lmtscl1,
+                  Limited_Work_Act = X_lmtwrk1)
+```
+
+I wonder how many records exist for each state or non-state.  Also, which state has the most records and which one has the fewest?
+```{r recordCounts}
+countByState <- workingData %>% group_by(US_State) %>% summarize(RecordCount = n())
+range(countByState$RecordCount)
+filter(countByState, RecordCount == 33668)
+filter(countByState, RecordCount == 1897)
+#Cleanup evironmnet vaibles no longer needed
+rm(countNAs_df); rm(countNAs); rm(modData); rm(variablesIwant); rm(cutoffValue)
+rm(varibleNames); rm(countByState)
+```
+##Research questions
+The Project requires that the research questions satisfy the following:
+
+Come up with at least three research questions that you want to answer using these data. You should phrase your research questions in a way that matches up with the scope of inference your data set allows for. 
+
+- Make sure that at least two of these questions involve at least three variables. You are welcomed to create new variables based on existing ones. 
+- With each question include a brief discussion (1-2 sentences) as to why this question is of interest to you and/or your audience.*
+
+The questions I address below are of interest only after reviewing the data available in the working data set.  These are curious questions, not serious analytic ones.  However, the questions meet the requirements.  I hope you will find them interesting too.
+
+###Research Quesion 1
+> Do people that use the Internet drink more than those that do not use the Internet?
+
+From the working data set, let's identify the varaibles we might need:
+
+| M**y Variable Name** | **Original Variable Name** | **Description**
+| ---------------- | ---------------------- | ----------------------------------------- |
+| AlcoholDays_Past_30 | alcday5 | Days In Past 30 Had Alcoholic Beverage |
+| Alcohol_Past_30 | drnkany5 | Drink Any Alcoholic Beverages In Past 30 Days |
+| Computed_Drinks_Day | drocdy3_ | Computed Drink-Occasions-Per-Day |
+| Number_Men | nummen | Number Of Adult Men In Household |
+| Number_Women | numwomen | Number Of Adult Women In Household |
+| Children_Calc | X_chldcnt | Computed Number Of Children In Household |
+| No_Children | children | Number Of Children In Household |
+| Internet_Past_30 | internet | Internet Use In The Past 30 Days? |
+| Heavy_Alcohol_Calc | X_rfdrhv4 | Heavy Alcohol Consumption Calculated Variable |
+| Is_US_State | NA- | 0 = Guam or Puerto Rico; 1 = US State |
+
+Let's subset the working data set to the variables of interest.
+```{r question1Variables}
+variblesQuest1 <- c("AlcoholDays_Past_30", "Alcohol_Past_30", "Computed_Drinks_Day", "Number_Men", "Number_Women", "Children_Calc", "No_Children", "Internet_Past_30", "Heavy_Alcohol_Calc", "Is_US_State")
+quest1Data <- select(workingData,one_of(variblesQuest1))
+```
+To make things easier and to remove data that may lead to skewed results, I further filter the data to include only complete records:
+```{r completeQuest1}
+quest1Data2 <- filter(quest1Data, complete.cases(quest1Data))
+rm(quest1Data)
+```
+Before moving further, let us make sure we understnad some of the variable definitions more fully:
+
+- AlcoholDays_Past_30 - During the past 30 days, how many days per week or per month did you have at least one drink of any alcoholic beverage such as beer, wine, a malt beverage or liquor?  The first digit denotes days per week (1) or days per month (2). The remaining digits indicate the count of days. 
+  + value range:  `range(quest1Data2$AlcoholDays_Past_30)`
+- Alcohol_Past_30 - Adults who reported having had at least one drink of alcohol in the past 30 days.  1 - Yes; 2 - No
+  + value range:  `range(quest1Data2$Alcohol_Past_30)`
+- Computed_Drinks_Day - Calculated drink-occasions-per-day.  0 - No Drink-Occasions per day; 1 - many
+  + value range:  `range(quest1Data2$Computed_Drinks_Day)`
+- Heavy_Alcohol_Calc - Heavy drinkers (adult men having more than two drinks per day and adult women having more than one drink per day).  1 = No; 2 = Yes
+  + value range:  `range(quest1Data2$Heavy_Alcohol_Calc)`
+- Internet_Past_30 - Have you used the internet in the past 30 days?
+  + value range:  1 = Yes; 2 = No
+
+
+Before plotting, need to transform the values into counts.  Then create bar plots showing the relative drinking habits by internet use.  Once complete, I create a dataframe to hold the data for plotting.
+
+- AlcoholDays_Past_30 - count the number of records greater than 0
+- Alcohol_Past_30 - Count Yes
+- Computed_Drinks_Day - count number of records greater than 0
+- Heavy_Alcohol_Calc - count records Yes
+
+```{r quest1Plot1}
+AlcoholDays_Past_30_yes <- nrow(filter(quest1Data2, AlcoholDays_Past_30 > 0))
+AlcoholDays_Past_30_no <- nrow(quest1Data2) - AlcoholDays_Past_30_yes
+
+Alcohol_Past_30_table <- as.data.frame(table(quest1Data2$Alcohol_Past_30))
+Alcohol_Past_30_yes <-  Alcohol_Past_30_table[2,2]
+Alcohol_Past_30_no <- Alcohol_Past_30_table[1,2]
+
+Computed_Drinks_Day_yes <- nrow(filter(quest1Data2, Computed_Drinks_Day > 0))
+Computed_Drinks_Day_no <- nrow(quest1Data2) - Computed_Drinks_Day_yes
+
+Heavy_Alcohol_Calc_table <- as.data.frame(table(quest1Data2$Heavy_Alcohol_Calc))
+Heavy_Alcohol_Calc_yes <- Heavy_Alcohol_Calc_table[2,2]
+Heavy_Alcohol_Calc_no <- Heavy_Alcohol_Calc_table[1,2]
+
+Internet_Past_30_table <- as.data.frame(table(quest1Data2$Internet_Past_30))
+Internet_Past_30_yes <- Internet_Past_30_table[1,2]
+Internet_Past_30_no <- Internet_Past_30_table[2,2]
+
+col_name <- c("Drink Days Month", "Drinks Month", "Drinks in Day", "Heavy Drinking")
+row_name <- c("Internet-Yes", "Internet_no")
+# counts_df <- c(AlcoholDays_Past_30_yes=AlcoholDays_Past_30_yes, Alcohol_Past_30_yes=Alcohol_Past_30_yes, Computed_Drinks_Day_yes=Computed_Drinks_Day_yes, Heavy_Alcohol_Calc_yes=Heavy_Alcohol_Calc_yes)
+
+counts <- c(AlcoholDays_Past_30_yes, Alcohol_Past_30_yes, Computed_Drinks_Day_yes, Heavy_Alcohol_Calc_yes)
+counts_df <-as.data.frame(counts)
+
+tmpdata <- workingData %>%  
+  na.omit() %>%
+  group_by(Internet_Past_30) %>% 
+  filter(AlcoholDays_Past_30 > 0, Computed_Drinks_Day >0) %>% 
+  summarize(ave_alc_days = mean(AlcoholDays_Past_30), Drinks_Day = mean(Computed_Drinks_Day), n=n())
+tmpdata <- tmpdata[, 4]
+ggplot(data=tmpdata, aes(x=Internet_Past_30, y=n)) + geom_bar(stat="identity")
+
+tmpdata <- modData %>%  
+  na.omit() %>%
+  group_by(is_State) %>% 
+  filter(AlcoholDays_Past_30 > 0, Computed_Drinks_Day >0) %>% 
+  summarize(ave_alc_days = mean(AlcoholDays_Past_30), Drinks_Day = mean(Computed_Drinks_Day), n=n())
+tmpdata <- tmpdata[, 4]
+ggplot(data=tmpdata, aes(x=Internet_Past_30, y=n)) + geom_bar(stat="identity")
+
+```
+Now we have collected the data, let's see if there is any associations via plotting:
+```{r quest1Plots}
+ggplot(quest1_df, aes(x=names_df, y=counts_df)) + geom_bar(stat = "identity")
+```
+
+###Research Quesion 2
+> Do people that eat lots of fruits and vegetables more active than those that do not eat these healthy foods?
+
+
+###Research Quesion 3
+> Are people less prone to depression or anxiety if they exercise?
+
+
+#Appendix
+
+##Varibles with <30% NAs:
+
+- addepev2 - Ever Told You Had A Depressive Disorder
+- alcday5 - Days In Past 30 Had Alcoholic Beverage
+- asthma3 - Ever Told Had Asthma
+- beanday_ - Computed Bean Intake In Times Per Day
+- <font color="red">blind</font> - Blind Or Difficulty Seeing
+- bloodcho - Ever Had Blood Cholesterol Checked
+- bphigh4 - Ever Told Blood Pressure High
+- <font color="red">cellfon3</font> - cellfon3
+- chccopd1 - (Ever Told) You Have (Copd) Chronic Obstructive Pulmonary Disease, Emphysema Or
+- chckidny - (Ever Told) You Have Kidney Disease?
+- chcocncr - (Ever Told) You Had Any Other Types Of Cancer?
+- chcscncr - (Ever Told) You Had Skin Cancer?
+- checkup1 - Length Of Time Since Last Routine Checkup
+- children - Number Of Children In Household
+- cholchk - How Long Since Cholesterol Checked
+- <font color="red">cpdemo1</font> - Do You Have A Cell Phone For Personal Use?
+- <font color="red">ctelenum</font> - Cell number
+- cvdcrhd4 - Ever Diagnosed With Angina Or Coronary Heart Disease
+- cvdinfr4 - Ever Diagnosed With Heart Attack
+- cvdstrk3 - Ever Diagnosed With A Stroke
+- decide - Difficulty Concentrating Or Remembering
+- <font color="red">delaymed</font> - Delayed Getting Medical Care
+- <font color="red">diabage2</font> - Age When Told Diabetic
+- <font color="red">diabete3</font> - (Ever Told) You Have Diabetes
+- diffalon - Difficulty Doing Errands Alone
+- diffdres - Difficulty Dressing Or Bathing
+- diffwalk - Difficulty Walking Or Climbing Stairs
+- <font color="red">dispcode</font> - Final Disposition
+- <font color="red">dlyother</font> - Delayed Getting Medical Care Other Response
+- doctdiab - Times Seen Health Professional For Diabetes
+- drnkany5 - Drink Any Alcoholic Beverages In Past 30 Days
+- drocdy3_ - Computed Drink-Occasions-Per-Day
+- educa - Education Level
+- employ1 - Employment Status
+- exerany2 - Exercise In Past 30 Days
+- fc60_ - Estimated Functional Capacity
+- flushot6 - Adult Flu Shot/Spray Past 12 Mos
+- <font color="red">fmonth</font> - File Month
+- fruit1 - How Many Times Did You Eat Fruit?
+- fruitju1 - How Many Times Did You Drink 100 Percent Pure Fruit Juices?
+- frutda1_ - Computed Fruit Intake In Times Per Day
+- ftjuda1_ - Computed Fruit Juice Intake In Times Per Day
+- fvbeans - How Many Times Did You Eat Beans Or Lentils?
+- fvgreen - How Many Times Did You Eat Dark Green Vegetables?
+- fvorang - How Many Times Did You Eat Orange-Colored Vegetables?
+- genhlth - General Health
+- grenday_ - Computed Dark Green Vegetable Intake In Times Per Day
+- havarth3 - Told Have Arthritis
+- height3 - Reported Height In Feet And Inches
+- hivtst6 - Ever Tested HIV
+- hlthcvrg - Health Insurance Coverage
+- hlthpln1 - Have Any Health Care Coverage
+- <font color="red">htin4</font> - Height in in
+- <font color="red">htm4</font> - height in m
+- <font color="red">idate</font> - Interview date
+- <font color="red">iday</font> - Interview Day
+- <font color="red">imonth</font> - Interview month
+- income2 - Income level
+- internet - Internet Use In The Past 30 Days?
+- is_State - Is the location a US State
+- iyear - Interview year
+- marital - Marital Status
+- <font color="red">maxvo2_</font> - Estimated Age-Gender Specific Maximum Oxygen Consumption
+- medbills - Currently Have Medical Bills
+- medcost - Could Not See Dr. Because Of Cost
+- medscost - Could Not Get Medicine Due To Cost
+- menthlth - Number Of Days Mental Health Not Good
+- <font color="red">mscode</font> - Metro status code
+- numadult - Number Of Adults In Household
+- <font color="red">numhhol2</font> - Household Telephones
+- nummen - Number Of Adult Men In Household
+- numwomen - Number Of Adult Women In Household
+- orngday_ - Computed Orange-Colored Vegetable Intake In Times Per Day
+- pa1vigm_ - Minutes Of Total Vigorous Physical Activity Per Week
+- <font color="red">pamiss1_</font> - Missing Physical Activity Data
+- persdoc2 - Multiple Health Care Professionals
+- physhlth - Number Of Days Physical Health Not Good
+- pneuvac3 - Pneumonia Shot Ever
+- pvtresd1 - Private Residence?
+- qlactlm2 - Activity Limitation Due To Health Problems
+- qstlang - Language Identifier
+- <font color="red">qstver</font> - Questionnaire Version Identifier
+- renthom1 - Own Or Rent Home
+- seatbelt - How Often Use Seatbelts In Car?
+- <font color="red">seqno</font> - Annual Sequence Number
+- sex - Respondents Sex
+- sleptim1 - How Much Time Do You Sleep
+- smoke100 - Smoked At Least 100 Cigarettes
+- <font color="red">stateres</font> - Resident Of State
+- <font color="red">strength</font> - How Many Times Did You Do Physical Activities Or Exercises To Strengthen Your Mu
+- <font color="red">strfreq_</font> - Strength Activity Frequency Per Week
+- tetanus - Received Tetanus Shot Since 2005?
+- toldhi2 - Ever Told Blood Cholesterol High
+- useequip - Health Problems Requiring Special Equipment
+- usenow3 - Use Of Smokeless Tobacco Products
+- vegeda1_ - Computed Vegetable Intake In Times Per Day
+- vegetab1 - How Many Times Did You Eat Other Vegetables?
+- veteran3 - Are you a verteran?
+- weight2 - Reported Weight In Pounds
+- <font color="red">wtkg3</font> - wt kg
+- <font color="red">X_age_g</font> - Imputed Age In Six Groups
+- <font color="red">X_age65yr</font> - Reported Age In Two Age Groups Calculated Variable
+- X_age80 - Imputed Age Value Collapsed Above 80
+- <font color="red">X_ageg5yr</font> - Reported Age In Five-Year Age Categories Calculated Variable
+- X_aidtst3 - Ever Been Tested For HIV Calculated Variable
+- X_asthms1 - Computed Asthma Status
+- X_bmi5 - Computed Body Mass Index
+- X_bmi5cat - Computed Body Mass Index Categories
+- X_casthm1 - Current Asthma Calculated Variable
+- X_chldcnt - Computed Number Of Children In Household
+- X_cholchk - Cholesterol Checked Calculated Variable
+- X_drdxar1 - Respondents Diagnosed With Arthritis
+- X_drnkdy4 - Computed Number Of Drinks Of Alcohol Beverages Per Day
+- X_drnkmo4 - Computed Total Number Drinks A Month
+- <font color="red">X_dualuse</font> - Dual Phone Use Categories
+- X_educag - Computed Level Of Education Completed Categories
+- <font color="red">X_frt16</font> - Reported Consuming Fruit >16/Day
+- X_frtlt1 - Consume Fruit 1 Or More Times Per Day
+- X_frtresp - Missing Any Fruit Responses
+- <font color="red">X_fruitex</font> - Fruit Exclusion From Analyses
+- X_frutsum - Total Fruits Consumed Per Day
+- <font color="red">X_hispanc</font> - Hispanic, Latino/A, Or Spanish Origin Calculated Variable
+- <font color="red">X_impnph</font> - Imputed Number Of Phones
+- X_imprace - Imputed Race/Ethnicity Value
+- X_incomg - Computed Income Categories
+- X_llcpwt - Final Weight: Land-Line And Cell-Phone Data
+- X_llcpwt2 - Truncated Design Weight Used In Adult Combined Land Line And Cell Phone Raking
+- X_lmtact1 - Limited Usual Activities
+- X_lmtscl1 - Limited Social Activities
+- X_lmtwrk1 - Limited Work Activities
+- X_ltasth1 - Lifetime Asthma Calculated Variable
+- X_misfrtn - The Number Of Missing Fruit Responses
+- X_misvegn - The Number Of Missing Vegetable Responses
+- <font color="red">X_mrace1</font> - Calculated Non-Hispanic Race Including Multiracial
+- X_pa150r2 - 150 Minute Physical Activity Calculated Variable
+- X_pa30021 - 300 Minute Physical Activity 2-Level Calculated Variable
+- X_pa300r2 - 300 Minute Physical Activity Calculated Variable
+- X_pacat1 - Physical Activity Categories
+- <font color="red">X_paindx1</font> - Physical Activity Index
+- <font color="red">X_parec1</font> - Aerobic And Strengthening Guideline
+- X_pastae1 - Aerobic And Strengthening (2-Level)
+- <font color="red">X_pastrng</font> - Muscle Strengthening Recommendation
+- <font color="red">X_prace1</font> - Computed Preferred Race
+- <font color="red">X_psu</font> - Primary Sampling Unit
+- <font color="red">X_race</font> - Computed Race-Ethnicity Grouping
+- <font color="red">X_race_g1</font> - Computed Race Groups Used For Internet Prevalence Tables
+- <font color="red">X_raceg21</font> - Computed Non-Hispanic Whites/All Others Race Categories Race/Ethnic Group Codes
+- <font color="red">X_racegr3</font> - Computed Five Level Race/Ethnicity Category.
+- <font color="red">X_rawrake</font> - Raw Weighting Factor Used In Raking
+- X_rfbing5 - Binge Drinking Calculated Variable
+- X_rfbmi5 - Overweight Or Obese Calculated Variable
+- X_rfchol - High Cholesterol Calculated Variable
+- X_rfdrhv4 - Heavy Alcohol Consumption Calculated Variable
+- X_rfhlth - Adults With Good Or Better Health
+- X_rfhype5 - High Blood Pressure Calculated Variable
+- X_rfseat2 - Always Or Nearly Always Wear Seat Belts
+- X_rfseat3 - Always Wear Seat Belts
+- X_rfsmok3 - Current Smoking Calculated Variable
+- X_smoker3 - Computed Smoking Status
+- X_state - State Name
+- <font color="red">X_strwt</font> - Stratum Weight
+- <font color="red">X_ststr</font> - Sample Design Stratification Variable
+- X_totinda - Leisure Time Physical Activity Calculated Variable
+- X_veg23 - Reported Consuming Vegetables >23/Day
+- X_vegesum - Total Vegetables Consumed Per Day
+- <font color="red">X_vegetex</font> - Vegetable Exclusion From Analyses
+- X_veglt1 - Consume Vegetables 1 Or More Times Per Day
+- <font color="red">X_vegresp</font> - Missing Any Vegetable Responses
+- <font color="red">X_wt2rake</font> - Design Weight Used In Raking

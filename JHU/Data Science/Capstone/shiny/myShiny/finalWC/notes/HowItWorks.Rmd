@@ -1,0 +1,15 @@
+---
+title: "How It Works"
+output: 
+     html_document:
+       keep_md: true
+       theme: united
+---
+
+Before reading this, I suggest you first read the Text Analytics document first.  It provides an overview of the technologies used to produce this application.  After reviewing that material, you will understand the process described below.
+
+1. Create a sample data set from the corpus
+2. Clean the sample (convert it to lowercase, remove punctuation, strip whitespace, remove entities, etc.) 
+3. Tokenize the sample into *n*-Grams
+4. Take the 1-2-3-4 gram frequencies and store them into data frames
+5. Use the data frame to predict the next word

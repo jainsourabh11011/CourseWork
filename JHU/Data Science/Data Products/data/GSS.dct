@@ -1,0 +1,10 @@
+infile dictionary {
+    _column(1)    numeric                               YEAR   %11f  "Gss year for this respondent                       "
+   _column(12)    numeric                                ID_   %11f  "Respondent id number"
+   _column(23)    numeric                               HRS2   %11f  "Number of hours usually work a week"
+   _column(34)    numeric                            MARITAL   %11f  "Marital status"
+   _column(45)    numeric                            MARTYPE   %11f  "Marital type"
+   _column(56)    numeric                             AGEWED   %11f  "Age when first married"
+   _column(67)    numeric                            DIVORCE   %11f  "Ever been divorced or separated"
+   _column(78)    numeric                             SPHRS2   %11f  "No. of hrs spouse usually works a week"
+}

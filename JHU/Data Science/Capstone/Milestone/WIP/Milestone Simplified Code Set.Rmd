@@ -1,0 +1,102 @@
+---
+title: "Simplified Code Set"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(stringi)
+library(RWeka)
+library(stringr)
+library(ggplot2)
+library(knitr)
+library(dplyr)
+library(ngram)
+library(tm)
+library(wordcloud)
+
+twitter_file <- "C:/Users/cweaver/Documents/GitHub/Coursera_DataScientist/Capstone/data/final/en_US/en_US.twitter.txt"
+news_file <- "C:/Users/cweaver/Documents/GitHub/Coursera_DataScientist/Capstone/data/final/en_US/en_US.news.txt"
+blog_file <- "C:/Users/cweaver/Documents/GitHub/Coursera_DataScientist/Capstone/data/final/en_US/en_US.blogs.txt"
+
+conn1 <- file(twitter_file, "r")
+blogs <- readLines(conn1, encoding="UTF-8", skipNul = TRUE)
+
+close(conn1)
+
+conn2 <- file(news_file, "r")
+news <- readLines(conn2, encoding="UTF-8")
+
+close(conn2)
+
+conn3 <- file(blog_file, "r")
+twitter <- readLines(conn3, encoding="UTF-8")
+close(conn3)
+
+words_blogs <- stri_count_words(blogs)
+words_news <- stri_count_words(news)
+words_twitter <- stri_count_words(twitter)
+
+size_blogs <- file.info(blog_file)$size/1024^2
+size_news <- file.info(news_file)$size/1024^2
+size_twitter <- file.info(twitter_file)$size/1024^2
+DataSummary <- data.frame(filename = c("blogs","news","twitter"),
+                            file_size_MB = c(size_blogs, size_news, size_twitter),
+                            num_lines = c(length(blogs),length(news),length(twitter)),
+                            num_words = c(sum(words_blogs),sum(words_news),sum(words_twitter)),
+                            mean_num_words = c(mean(words_blogs),mean(words_news),mean(words_twitter)))
+
+kable(DataSummary)
+
+###################
+
+#NEED to define corpus!!
+
+tdm <- TermDocumentMatrix(corpus)
+tdm1 <- removeSparseTerms(tdm, 0.99)
+
+dtm <- as.DocumentTermMatrix(tdm1)
+dtm2 <- as.matrix(dtm)
+frequency <- colSums(dtm2)
+frequency <- sort(frequency, decreasing=TRUE)
+words <- names(frequency)
+wordcloud(words, frequency)
+
+#######################
+
+BigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=2, max=2))
+TrigramTokenizer <- function(x) NGramTokenizer(x, Weka_control(min=3, max=3))
+
+freq_frame <- function(tdm){
+  freq <- sort(rowSums(as.matrix(tdm)), decreasing=TRUE)
+  freq_frame <- data.frame(word=names(freq), freq=freq)
+  return(freq_frame)
+}
+
+freq1_frame <- freq_frame(tdm1)
+freq1_frame
+
+###############################
+
+tdm2a <- TermDocumentMatrix(corpus, control=list(tokenize=BigramTokenizer))
+tdm2 <- removeSparseTerms(tdm2a, 0.999)
+
+freq1_frame <- freq_frame(tdm2)
+freq1_frame
+
+wordcloud(freq1_frame$word, freq1_frame$freq)
+
+#################
+
+tdm3a <- TermDocumentMatrix(corpus, control=list(tokenize=TrigramTokenizer))
+tdm3 <- removeSparseTerms(tdm3a, 0.9999)
+
+freq1_frame <- freq_frame(tdm3)
+freq1_frame
+
+wordcloud(freq1_frame$word, freq1_frame$freq)
+```
+
+

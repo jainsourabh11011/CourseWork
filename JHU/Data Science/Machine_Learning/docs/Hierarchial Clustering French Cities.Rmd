@@ -1,0 +1,102 @@
+---
+title: "Hierarchial Clustering French Cities"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+See http://www.r-bloggers.com/clustering-french-cities-based-on-temperatures/?utm_source=feedburner&utm_medium=email&utm_campaign=Feed%3A+RBloggers+%28R+bloggers%29
+
+In order to illustrate hierarchical clustering techniques and k-means, I did borrow François Husson‘s dataset, with monthly average temperature in several French cities.
+```{r}
+temp=read.table("http://freakonometrics.free.fr/FR_temp.txt", header=TRUE,dec=",")
+```
+We have 15 cities, with monthly observations
+```{r}
+X=temp[,1:12]
+boxplot(X)
+```
+
+Since the variance seems to be rather stable, we will not ‘normalize’ the variables here,
+```{r}
+apply(X,2,sd)
+```
+In order to get a hierarchical cluster analysis, use for instance
+```{r message=FALSE}
+h <- hclust(dist(X), method = "ward")
+plot(h, labels = rownames(X), sub = "")
+```
+
+An alternative is to use
+```{r message=FALSE}
+library(FactoMineR)
+h2=HCPC(X)
+dev.off() #needed to add this to avoid "Error in plot.new() : figure margins too large"
+plot(h2)
+```
+Here, we visualise observations with a principal components analysis. We have here also an automatic selection of the number of classes, here 3. We can get the description of the groups using
+```{r}
+h2$desc.ind
+```
+
+or directly
+```{r}
+cah=hclust(dist(X))
+groups.3 <- cutree(cah,3)
+```
+
+We can also visualise those classes by ourselves,
+```{r}
+acp=PCA(X,scale.unit=FALSE)
+plot(acp$ind$coord[,1:2],col="white")
+text(acp$ind$coord[,1],acp$ind$coord[,2], rownames(acp$ind$coord),col=groups.3)
+
+#It is possible to plot the centroïds of those clusters
+
+PT=aggregate(acp$ind$coord,list(groups.3),mean)
+points(PT$Dim.1,PT$Dim.2,pch=19)
+```
+
+If we add Voroid sets around those centroïds, here we do not see them (actually, we see the point – in the middle – that is exactly at the intersection of the three regions),
+```{r}
+library(tripack)
+plot(acp$ind$coord[,1:2],col="white")
+text(acp$ind$coord[,1],acp$ind$coord[,2], rownames(acp$ind$coord),col=groups.3)
+V <- voronoi.mosaic(PT$Dim.1,PT$Dim.2)
+plot(V,add=TRUE)
+```
+
+To visualize those regions, use
+```{r}
+p=function(x,y){which.min((PT$Dim.1-x)^2+(PT$Dim.2-y)^2)}
+
+vx=seq(-10,12,length=251)
+vy=seq(-6,8,length=251)
+z=outer(vx,vy,Vectorize(p))
+image(vx,vy,z,col=c(rgb(1,0,0,.2), rgb(0,1,0,.2),rgb(0,0,1,.2)))
+CL=c("red","black","blue")
+text(acp$ind$coord[,1],acp$ind$coord[,2], rownames(acp$ind$coord),col=CL[groups.3])
+```
+
+Actually, those three groups (and those three regions) are also the ones we obtain using a k-mean algorithm,
+```{r}
+km=kmeans(acp$ind$coord[,1:2],3)
+km
+```
+
+But actually, since again we have some spatial data, it is possible to visualize them on a map
+```{r warning=FALSE, message=FALSE}
+library(maps)
+map("france")
+points(temp$Long,temp$Lati,col=groups.3,pch=19)
+```
+
+or, to visualize the regions, use e.g.
+```{r warning=FALSE}
+library(car)
+map("france")
+points(temp$Long,temp$Lati,col=groups.3,pch=19)
+for(i in 1:3) 
+dataEllipse(temp$Long[groups.3==i], temp$Lati[groups.3==i], levels=.7,add=TRUE, col=i+1,fill=TRUE)

@@ -1,0 +1,97 @@
+---
+title: "Regression Models Course Project"
+author: 
+date: 
+output:
+  html_document:
+    theme: flatly
+---
+#Synopsis
+Exploring the relationship between a set of variables and miles per gallon (MPG) (outcome), we are particularly interested in the following two questions:
+1. "Is an automatic or manual transmission better for MPG"
+2. "Quantify the MPG difference between automatic and manual transmissions"
+
+#Data Processing
+###Load/Import Required Libraries & Data Files
+```{r}
+echo = TRUE
+options(scipen = 1)
+require(ggplot2)
+data(mtcars)
+```
+##As per the mtcars help file: 
+The variables 'am=0' for automatic transmissions and 'am=1' for manual transmissions are used to render distributions for each respectively based upon their mpg.
+
+#Exploratory Analysis
+In order to deduce whether manual or auto is better for MPG, we must first infer as to whether the two distinctive transmission have normalized distributions across their mpg values.
+```{r}
+mtauto<-subset(mtcars, mtcars$am==0)
+mtman<-subset(mtcars, mtcars$am==1)
+
+nmtauto<-rnorm(mtauto$mpg)
+tmtauto<-rt(mtauto$mpg, df=Inf)
+shapiro.test(nmtauto);shapiro.test(tmtauto)
+
+nmtman<-rnorm(mtman$mpg)
+tmtman<-rt(mtman$mpg, df=Inf)
+shapiro.test(nmtman);shapiro.test(tmtman)
+```
+##Utilizing the Shapiro-Wilk Normality Test: 
+Because the p-value of 'mtauto' and 'mtman' mpg distributions are greater than 0.05, you cannot reject the hypothesis that the sample comes from a population which has a normal distribution. As a result, we are at liberty to utilize the t-test to compare the means of mpg for both automatic and manual transmission data sets.
+```{r}
+t.test(mtauto$mpg, mtman$mpg, alternative = "greater", paired=FALSE)
+```
+With a p-value of 0.9993, the confidence in this comparison cannot reject the hypothesis that this sample delivers a comparison which entitles manual transmission automobiles have a stronger MPG than those with automatic transmissions.
+```{r  results='hide', message=FALSE, warning=FALSE}
+model1 <- lm(mpg ~ ., data = mtcars)
+model2 <- step(model1, direction = "both")
+summary(model2)
+model3 <- lm(mpg ~ am, data=mtcars)
+```
+##Greatest R-Squared Model
+```{r}
+lrm1<-lm(data=mtcars, mpg ~ wt + qsec + am)
+```
+##Attain the variables with the highest correlations
+```{r}
+cor <- round(cor(mtcars)[1,], 2)
+corsort <- names(sort(abs(cor),decreasing=T))
+lrm2<-lm(data=mtcars, mpg~wt+cyl+disp+hp)
+```
+##Linear regression model with the most correlated variables and greatest R squared values
+```{r}
+lrm3<-lm(data=mtcars, mpg~wt+cyl+disp+hp+qsec+am)
+```
+We compare the original 'model3' with the 'lrm1', 'lrm2', and 'lrm3' regression models to determine any significant difference amongst the models for a best fit.
+```{r}
+anova(model3, lrm1, lrm2, lrm3)
+```
+With a p-value of 4.498e-09, we have determined that wt, qsec, and am are the most influential variables in determining the quantification of mpg difference between automatic and manual transmissions. The makes 'lrm1' our best fitting model.
+```{r}
+summary(lrm1)
+```
+#Conclusion
+##Based on the summary above:
+83.36% of the variance is explained by this model as manual transmissions gaining 2.94 MPG over automatic transmission vehicles for every 1,000 lbs
+
+#Appendix - Statistical Inference
+The box plot below provides the direct correlation between automatic and manual transmissions for the original 'model3'
+```{r, echo=FALSE}
+ggplot(data=mtcars, aes(x=factor(mtcars$am), y=mtcars$mpg, fill=factor(mtcars$am))) + 
+  geom_boxplot() +
+  xlab("Auto or Manual") + ylab("MPG") + 
+  geom_jitter(position=position_jitter(width=.1, height=0)) +
+  scale_colour_discrete(name = "Auto/Manual") +
+  scale_fill_discrete(name="Auto/Manual", breaks=c("0", "1"),
+            labels=c("Automatic", "Manual")) +
+  scale_x_discrete(breaks=c("0", "1"), labels=c("Automatic", "Manual")) +
+  ggtitle("MPG Analysis of Automatic and Manual Transmissions")
+
+```
+
+The plot below provides the heavy correlation between weight and MPG for automatic and manual transmissions.
+```{r, echo=FALSE}
+ggplot(mtcars, aes(wt,mpg)) + geom_point(aes(color = am))
+```
+
+

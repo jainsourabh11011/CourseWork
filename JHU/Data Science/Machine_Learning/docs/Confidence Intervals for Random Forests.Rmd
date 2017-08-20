@@ -1,0 +1,96 @@
+---
+title: "Confidence Intervals for Random Forests"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+[Random Forests](https://www.stat.berkeley.edu/~breiman/RandomForests/), the "go to" classifier for many data scientists, is a fairly complex algorithm with many moving parts that introduces randomness at different levels. Understanding exactly how the algorithm operates requires some work, and assessing how good a Random Forests model fits the data is a serious challenge. In the pragmatic world of machine learning and data science, assessing model performance often comes down to calculating the area under the ROC curve (or some other convenient measure) on a hold out set of test data. If the ROC looks good then the model is good to go.
+
+Fortunately, however, goodness of fit issues have a kind of nagging persistence that just won't leave statisticians alone. In a gem of a paper (and here) that sparkles with insight, the authors (Wagner, Hastie and Efron) take considerable care to make things clear to the reader while showing how to calculate confidence intervals for Random Forests models. 
+
+Using the high ground approach favored by theorists, Wagner et al. achieve the result about Random Forests by solving a more general problem first: they derive estimates of the variance of bagged predictors that can be computed from the same bootstrap replicates that give the predictors. After pointing out that these estimators suffer from two distinct sources of noise: 
+
+1. Sampling noise - noise resulting from the randomness of data collection
+2. Monte Carlo noise - noise that results from using a finite number of bootstrap replicates
+
+they produce bias corrected versions of [jackknife](http://projecteuclid.org/euclid.aos/1176345462) and [infinitesimal jackknife](http://www.stat.washington.edu/people/fritz/Reports/InfinitesimalJackknife.pdf) estimators. A very nice feature of the paper is the way the authors' illustrate the theory with simulation experiments and then describe the simulations in enough detail in an appendix for readers to replicate the results. I generated the following code and figure to replicate Figure 1 of their the first experiment using the authors' GitHub based package, [randomForestCI](https://github.com/swager/randomForestCI).
+
+Here, I fit a [randomForest](https://mran.revolutionanalytics.com/package/randomForest/) model to eight features from the [UCI MPG data set](https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/) and use the randomForestInfJack() function to calculate the infinitesimal Jackknife estimator. (The authors use seven features, but the overall shape of the result is the same.)
+```{r message=FALSE, warning=FALSE}
+# Random Forest Confidence Intervals
+#install.packages("devtools")
+library(devtools) 
+#install_github("swager/randomForestCI")
+library(randomForestCI)
+library(dplyr) # For data manipulation
+library(randomForest) # For random forest ensemble models
+library(ggplot2)
+
+# Fetch data from the UCI MAchine Learning Repository
+url <-"https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data"
+mpg <- read.table(url,stringsAsFactors = FALSE,na.strings="?")
+# https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.names
+names(mpg) <- c("mpg","cyl","disp","hp","weight","accel","year","origin","name")
+head(mpg)
+
+# Look at the data and reset some of the data types
+dim(mpg)
+
+sapply(mpg,class)
+mpg <- mutate(mpg, hp = as.numeric(hp), year = as.factor(year), origin = as.factor(origin))
+head(mpg,2)
+#
+# Function to divide data into training, and test sets 
+index <- function(data=data,pctTrain=0.7)
+{
+ # fcn to create indices to divide data into random 
+ # training, validation and testing data sets
+ N <- nrow(data) 
+ train <- sample(N, pctTrain*N) 
+ test <- setdiff(seq_len(N),train) 
+ Ind <- list(train=train,test=test)
+ return(Ind)
+} 
+#
+set.seed(123)
+ind <- index(mpg,0.8)
+length(ind$train); length(ind$test)
+
+form <- formula("mpg ~ cyl + disp + hp + weight + accel + year + origin")
+
+rf_fit <- randomForest(formula=form,data=na.omit(mpg[ind$train,]), keep.inbag=TRUE) # Build the model
+
+# Plot the error as the number of trees increases
+plot(rf_fit)
+
+# Plot the important variables
+varImpPlot(rf_fit,col="blue",pch= 2)
+
+# Calculate the Variance
+X <- na.omit(mpg[ind$test,-1])
+var_hat <- randomForestInfJack(rf_fit, X, calibrate = TRUE)
+
+#Have a look at the variance
+head(var_hat); dim(var_hat)
+plot(var_hat)
+
+# Plot the fit
+df <- data.frame(y = mpg[ind$test,]$mpg, var_hat)
+df <- mutate(df, se = sqrt(var.hat))
+head(df)
+
+p1 <- ggplot(df, aes(x = y, y = y.hat))
+p1 + geom_errorbar(aes(ymin=y.hat-se, ymax=y.hat+se), width=.1) +
+          geom_point() + 
+          geom_abline(intercept=0, slope=1, linetype=2) +
+          xlab("Reported MPG") +
+          ylab("Predicted MPG") +
+          ggtitle("Error Bars for Random Forests")
+```
+
+An interesting feature of the plot is that Random Forests doesn't appear to have the same confidence in all of its estimates, sometimes being less confident about estimates closer to the diagonal than those further away.
+
+Don't forget to include confidence intervals with your next Random Forests model.

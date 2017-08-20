@@ -1,0 +1,134 @@
+---
+title: "The Fuel Consumption of Automatic and Manual Vehicles (1973-74 models)"
+author: 
+date: 
+output: html_document
+---
+```{r,echo=FALSE,warning=FALSE}
+library(datasets)
+library(lattice)
+library(car)
+data(mtcars)
+```
+### Overview
+The two questions addressed in this project are:
+
+1. Is an automatic or manual transmission better for MPG?
+2. What is the MPG difference between automatic and manual transmissions?
+
+I will attempt to answer these questions using a multi-linear regression model with a dependent variable of miles per gallon.  The model will include independent variables (control variables) for the characteristics of the engine, such as the number of cylinders and displacement volume, and the car itself, such as rear axle ratio and weight.
+
+### The Data
+The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973-74 models). A table with more detailed information about each variable can be found in the appendix.
+
+### Exploratory Analysis
+The result of the Shapiro-Wilk normality test suggests it is safe to assume the dependent variable is normal with a mean of `r round(mean(mtcars$mpg),2)` mpg.
+
+The exploratory plots suggest that manual transmission vehicles may be more fuel efficient than automatic transmission vehicles because the top row is slightly higher than the bottom row, but they also illustrate that other factors are probably effecting fuel efficiency.
+
+For example, there seems to be an indirect relationship between fuel efficiency and weight.  This builds confidence in the quality of our data because it is reasonable to assume that heavier cars are less fuel efficient. A multi-variate method such as multi-linear regression will accurately assess how a car's transmission type (automatic/manual) effects its fuel efficiency while controlling for these other relationships.
+
+### Nested Model Testing
+```{r, results='hide'}
+# Change cyl to factor variable with 8 cylinders as the reference level #
+mtcars$cyl <- relevel(as.factor(mtcars$cyl),"8")
+
+# Create a model for each variable adding variables based on their correlation with mpg #
+reg1 <- lm(mpg~am+wt,data=mtcars)
+reg2 <- lm(mpg~am+wt+cyl,data=mtcars)
+reg3 <- lm(mpg~am+wt+cyl+disp,data=mtcars)
+reg4 <- lm(mpg~am+wt+cyl+disp+hp,data=mtcars)
+reg5 <- lm(mpg~am+wt+cyl+disp+hp+drat,data=mtcars)
+reg6 <- lm(mpg~am+wt+cyl+disp+hp+drat+vs,data=mtcars)
+reg7 <- lm(mpg~am+wt+cyl+disp+hp+drat+vs+carb,data=mtcars)
+reg8 <- lm(mpg~am+wt+cyl+disp+hp+drat+vs+carb+gear,data=mtcars)
+reg9 <- lm(mpg~am+wt+cyl+disp+hp+drat+vs+carb+gear+qsec,data=mtcars)
+anova(reg1, reg2, reg3, reg4, reg5, reg6, reg7, reg8, reg9)
+
+# Use the anova table and add variables with a p-value < .1 #
+reg10 <- lm(mpg~am+wt+cyl+hp,data=mtcars)
+anova(reg2,reg10)
+```
+```{r,echo=FALSE,results='hide'}
+viftable <- vif(reg10)
+```
+
+##### Multi-collinearity
+```{r,echo=FALSE}
+# Multicollinearity test #
+sqrt(viftable[,1])>2
+```
+Although the Anova tests above would recommend $mpg = \beta_0 + \beta_1am + \beta_2wt + \beta_3cyl + \beta_4hp + \epsilon$, this model has a multi-collinearity problem (3/4 of the variables are collinear).
+
+### Final Stepwise Regression Model
+In order to determine which variables to include in the final model and to avoid the multi-collinearity issue, I used an R stepwise regression function, step(), and set the direction=both. This function adds and removes independent variables to the model until it finds the combination of independent variables that minimizes the AIC of the model.
+
+$$mpg = \beta_0 + \beta_1 am + \beta_2 qsec + \beta_3 wt + \epsilon$$
+
+```{r, echo=FALSE, results='hide'}
+final.reg <- lm(mpg~am+qsec+wt,data=mtcars)
+```
+```{r,echo=FALSE}
+round(summary(final.reg)$coef,3)
+```
+Adjusted R^2^ = `r round(summary(final.reg)$adj.r.squared,3)`
+
+# Conclusion
+Many characteristics of cars are highly correlated with each other.  For example, heavy cars tend to have larger engines and powerful engines tend to have more cylinders (see correlation matrix in the appendix).  This results in multi-colinearity issues.
+
+In order to deal with this problem, the 1/4 mile speed of a vehicle is extremely useful.  If the car does not have the correct balance of attributes, this medium distance speed will decrease and so to will its fuel efficiency.  Therefore, it is a useful control variable in combination with the vehicle's weight in determining the effect that a car's transmission type has on its fuel efficiency.
+
+Manual transmission vehicles appeared to be more fuel efficient than automatic transmission vehicles in 1973-74. Based on the mtcars dataset, one could argue that, in 1974, a manual transmission vehicle's mpg was between **`r round(2.9358 - 1.96*1.4109,2)`** and **`r round(2.9358 + 1.96*1.4109,2)`** greater than a similar automatic transmission vehicle with a 95% confidence level.
+
+## Appendix
+#### Variable Descriptions
+Variable Name  | Description
+------------- | -------------
+*mpg* | Miles/(US) gallon
+**am**  | Transmission (0 = automatic, 1 = manual)
+cyl  | Number of cylinders
+disp  | Displacement (cu.in.)
+hp  | Gross horsepower
+drat  | Rear axle ratio
+wt  | Weight (lb/1000)
+qsec  | 1/4 mile time
+vs  | V/S
+gear  | Number of forward gears
+carb  | Number of carburetors
+
+#### Dependent Variable *mpg*
+```{r,echo=FALSE}
+hist(mtcars$mpg,breaks=32,col="red",main="Histogram of Dependent Variable (mpg)",xlab="Miles per Gallon")
+abline(v=mean(mtcars$mpg),lwd=2)
+shapiro.test(mtcars$mpg)
+```
+
+#### Exploratory Plots
+```{r,echo=FALSE}
+data(mtcars)
+mtcars$am <- as.factor(mtcars$am)
+levels(mtcars$am) <- c("Automatic","Manual")
+mtcars$cyl <- as.factor(mtcars$cyl)
+levels(mtcars$cyl) <- c("4 cylinders","6 cylinders","8 cylinders")
+xyplot(mpg~hp|cyl*am,data=mtcars,ylab="Miles per Gallon",xlab="Horsepower",main="Engine Characteristics and MPG")
+```
+
+```{r,echo=FALSE}
+xyplot(mpg~wt|cyl*am,data=mtcars,ylab="Miles per Gallon",xlab="Weight (lb/1000)",main="Vehicle Weight and MPG")
+```
+
+#### Regression Diagnostics
+```{r,echo=FALSE}
+plot(final.reg)
+```
+
+#### Summary Statistics
+```{r,echo=FALSE}
+summary(mtcars)
+```
+
+#### Correlation Matrix
+```{r,echo=FALSE}
+data(mtcars)
+cor(mtcars)
+```

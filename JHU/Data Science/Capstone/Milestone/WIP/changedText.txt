@@ -1,0 +1,79 @@
+ORIGINAL
+
+1                                                                                      they've decided its more fun if I don't.
+2                                          So Tired D; Played Lazer Tag & Ran A LOT D; Ughh Going To Sleep Like In 5 Minutes ;)
+3                                                               Words from a complete stranger! Made my birthday even better :)
+4                           RT : According to the National Retail Federation $16.3 BILLION was spent on #MothersDay last year!!
+5 Athletes/celebrities should have a tool to charge $.99 per RT request. $ to support foundations/charities, fans get involved.
+6                                                                                                          I'm taking Adam! :-)
+7                          #Inspiring RT : Great minds must be ready not only to take opportunities, but to make them. --Colton
+8            med school...wow! I could never do that. Am too OCD to be around blood and sick people for long periods of time ;)
+9  Hey Boston-busy tonight? If not, come check out the lineup@ TT's (central sq) featuring my clients What Time is it Mr. Fox?!
+
+
+CONTRACTIONS
+
+[1] "They have decided its more fun if I do not."                                                                                  
+[2] "So Tired D; Played Lazer Tag & Ran A LOT D; Ughh Going To Sleep Like In 5 Minutes ;)"                                         
+[3] "Words from a complete stranger! Made my birthday even better :)"                                                              
+[4] "RT : According to the National Retail Federation $16.3 BILLION was spent on #MothersDay last year!!"                          
+[5] "Athletes/celebrities should have a tool to charge $.99 per RT request. $ to support foundations/charities, fans get involved."
+[6] "I am taking Adam! :-)"                                                                                                        
+[7] "#Inspiring RT : Great minds must be ready not only to take opportunities, but to make them. --Colton"                         
+[8] "Med school...wow! I could never do that. Am too OCD to be around blood and sick people for long periods of time ;)"           
+[9] "Hey Boston-busy tonight? If not, come check out the lineup@ TT's (central sq) featuring my clients What Time is it Mr. Fox?!" 
+
+ABBRVIATION
+
+[1] "They have decided its more fun if I do not."                                                                                    
+[2] "So Tired D; Played Lazer Tag & Ran A LOT D; Ughh Going To Sleep Like In 5 Minutes ;)"                                           
+[3] "Words from a complete stranger! Made my birthday even better :)"                                                                
+[4] "RT : According to the National Retail Federation $16.3 BILLION was spent on #MothersDay last year!!"                            
+[5] "Athletes/celebrities should have a tool to charge $.99 per RT request. $ to support foundations/charities, fans get involved."  
+[6] "I am taking Adam! :-)"                                                                                                          
+[7] "#Inspiring RT : Great minds must be ready not only to take opportunities, but to make them. --Colton"                           
+[8] "Med school...wow! I could never do that. Am too OCD to be around blood and sick people for long periods of time ;)"             
+[9] "Hey Boston-busy tonight? If not, come check out the lineup@ TT's (central sq) featuring my clients What Time is it Mister Fox?!"
+
+
+SYMBOL
+
+[1] "They have decided its more fun if I do not."                                                                                             
+[2] "So Tired D; Played Lazer Tag and Ran A LOT D; Ughh Going To Sleep Like In 5 Minutes ;)"                                                  
+[3] "Words from a complete stranger! Made my birthday even better :)"                                                                         
+[4] "RT : According to the National Retail Federation dollar 16.3 BILLION was spent on number MothersDay last year!!"                         
+[5] "Athletes/celebrities should have a tool to charge dollar .99 per RT request. dollar to support foundations/charities, fans get involved."
+[6] "I am taking Adam! :-)"                                                                                                                   
+[7] "number Inspiring RT : Great minds must be ready not only to take opportunities, but to make them. --Colton"                              
+[8] "Med school...wow! I could never do that. Am too OCD to be around blood and sick people for long periods of time ;)"                      
+[9] "Hey Boston-busy tonight? If not, come check out the lineup at TT's (central sq) featuring my clients What Time is it Mister Fox?!"
+
+
+gsub
+
+[1] "They have decided its more fun if I do not."                                                                                           
+[2] "So Tired D Played Lazer Tag and Ran A LOT D Ughh Going To Sleep Like In 5 Minutes "                                                    
+[3] "Words from a complete stranger! Made my  irthday even  etter "                                                                         
+[4] "RT  According to the National Retail Federation dollar 16.3 BILLION was spent on num er MothersDay last year!!"                        
+[5] "Athletescele rities should have a tool to charge dollar .99 per RT request. dollar to support foundationscharities, fans get involved."
+[6] "I am taking Adam! -"                                                                                                                   
+[7] "num er Inspiring RT  Great minds must  e ready not only to take opportunities,  ut to make them. --Colton"                             
+[8] "Med school...wow! I could never do that. Am too OCD to  e around  lood and sick people for long periods of time "                      
+[9] "Hey Boston- usy tonight? If not, come check out the lineup at TT's central sq featuring my clients What Time is it Mister Fox?!"
+
+Non ASCII
+
+[1] "They have decided its more fun if I do not."                                                                                           
+[2] "So Tired D Played Lazer Tag and Ran A LOT D Ughh Going To Sleep Like In 5 Minutes"                                                     
+[3] "Words from a complete stranger! Made my irthday even etter"                                                                            
+[4] "RT According to the National Retail Federation dollar 16.3 BILLION was spent on num er MothersDay last year!!"                         
+[5] "Athletescele rities should have a tool to charge dollar .99 per RT request. dollar to support foundationscharities, fans get involved."
+[6] "I am taking Adam! -"                                                                                                                   
+[7] "num er Inspiring RT Great minds must e ready not only to take opportunities, ut to make them. --Colton"                                
+[8] "Med school...wow! I could never do that. Am too OCD to e around lood and sick people for long periods of time"                         
+[9] "Hey Boston- usy tonight? If not, come check out the lineup at TT's central sq featuring my clients What Time is it Mister Fox?!"  
+
+CLEAN
+
+
+

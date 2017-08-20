@@ -1,0 +1,67 @@
+---
+title: "Simpsons Paradox"
+output:
+  html_document:
+    highlight: pygments
+    theme: spacelab
+    toc: yes
+header-includes: \usepackage{graphicx} \usepackage{mathtools}
+---
+```{r echo=FALSE, message=FALSE}
+if(!require(easypackages)){
+    install.packages("easypackages")
+    library(easypackages)
+}
+packages("dplyr", "reshape2", prompt = FALSE)
+```
+
+See http://www.r-bloggers.com/simpsons-paradox-2/?utm_source=feedburner&utm_medium=email&utm_campaign=Feed%3A+RBloggers+%28R+bloggers%29
+
+http://vudlab.com/simpsons/
+
+**“Statistics are used much like a drunk uses a lamppost: for support, not illumination.”**
+
+Simpson’s Paradox (Yule-Simpson Effect). Many people are not familiar with this phenomena, so I thought I would provide a brief example to help shed some light on it. If you are not aware of the problem of confounding or “lurking” variables in your analysis, you can box yourself into an analytical corner. 
+
+In short what is happening is that a trend or association that appears between two different variables reverses when a third variable is included.  You will stumble into or at least need to be on the lookout for this effect of spurious correlation when you have *unbalanced group sizes, like you often have using observational data*. This is what happened in my recent discovery.
+
+In the example below, let’s have a look at the UC Berkeley data, or at least the portion of it by Department, as provided in a Wikipedia article. https://en.wikipedia.org/wiki/Simpson%27s_paradox#cite_note-Bickel-11
+
+
+What the data we explore contains is the number of applications and admissions by gender to six different graduate schools. Again, this is just a portion of the data, focusing in on the largest departments.
+
+```{r}
+dpt <- c("A", "B", "C", "D", "E", "F", "A", "B", "C", "D", "E", "F")
+app <- c(825,560,325,417,191,272,108,25,593,375,393,341)
+adm <- c(512,353,120,138,53,16,89,17,202,131,94,24)
+gen <- c("m","m","m","m","m","m","f","f","f","f","f","f")
+df <- cbind.data.frame(dpt,app,adm,gen)
+str(df)
+```
+There are a number of ways to demonstrate the effect, but I thought I would give it a go using dplyr. First, let’s group the data by gender (gen) then look at their overall admission rate.
+```{r message=FALSE}
+by_gen = group_by(df, gen) 
+summarize(by_gen, adm_rate=sum(adm)/sum(app))
+```
+Clearly there is a huge gender bias problem in graduate school admissions at UC Berkeley and it is time to round up a herd of lawyers. On a side note, what is the best way to save a drowning lawyer? It’s easy, just take your foot off their head.
+
+We can even provide a statistical test to strengthen the assertion of bias. In R, a proportions test can be done via the prop.test() function, inputting the number of “hits” and the number of “trials”.
+```{r}
+summarize(by_gen, sum(adm))
+
+summarize(by_gen, sum(app))
+
+prop.test(x=c(557,1192), n=c(1835,2590))
+```
+We see in the output a high level of statistical significance and a confidence interval with a difference of roughly 13 to 19 percent. However, beware of the analyst proclaiming truths using a 2×2 table with observational data! In this instance, the confounding variable is the department (dpt).
+
+In order to have a look at the data by gender and by department, we will once again use the group_by() function, then calculate the admission rates and finally turn it from “long” to “wide” format.
+```{r}
+by_dpt = group_by(df, dpt, gen)
+df2 = as.data.frame(summarize(by_dpt, adm_rate=sum(adm)/sum(app)))
+df2
+
+df2_wide = dcast(df2, dpt ~ gen, value.var = "adm_rate")
+df2_wide
+```
+With the inclusion of department we now see that females actually have higher admission rates in four of the six departments (A,B,D,F). How can this be? It had to do with rates and the volume of admission to the various departments. Again, *the groups were highly unbalanced*. 

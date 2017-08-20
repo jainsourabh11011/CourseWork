@@ -1,0 +1,109 @@
+---
+title: "tm VS qdap"
+output: html_document
+---
+###Introduction
+The qdap and tm packages each have two basic data formats. qdap stores raw text data in the form of a data.frame augmented with columns of demographic variables whereas tm stores raw textasaCorpusandannotatesdemographicinformationwithMetaDataattributes. Thestructures are bothlists and are comparable. Thesecondformatbothpackagesuseisamatrixstructureofwordfrequencycounts. Theqdap package utilizes the Word Frequency Matrix (wfm function) whereas the tm package utilizes the Term Document Matrix or Document Term Matrix (TermDocumentMatrix and DocumentTermMatrix functions). Again the structure is similar between these two data forms. 
+
+![](../Capstone/figures/qdap-tm.png
+
+One of the most visible differences between qdap-tm data forms is that qdap enables the user toreadilyviewthedatawhilethetmutilizesaprintmethodthatprovidesasummaryofthedata. The tm::inspect function enables the user to view tm data forms. The qdap package provides qdap::qview and qdap::htruncdf functions to view more digestible amounts of the data. Let’s have a look at the different data types. We’ll start by loading both packages:
+```{r loadPackages}
+library(qdap); library(tm)
+```
+Now let us have a look at the raw text storage of both packages.
+
+###1.1 Raw Text
+####1.1.1 qdap’s Raw Text
+```{r loadData}
+data("DATA")
+qview(DATA)
+htruncdf(DATA)
+```
+####1.1.2 tm’s Raw Text
+```{r}
+data("crude")
+crude
+inspect(crude)
+```
+###1.2 Word/Term Frequency Counts
+Now we’ll look at how the two packages handle word frequency counts. We’ll start by setting up the raw text forms the two packages expect.
+
+Bothqdap_datandtm_datare storing this basic information:
+```{r newData}
+tm_dat <- qdap_dat <- DATA[1:4, c(1, 4)] rownames(tm_dat) <- paste("docs", 1:nrow(tm_dat)) tm_dat <- Corpus(DataframeSource(tm_dat[, 2, drop=FALSE]))
+```
+####1.2.1 qdap’s Frequency Counts
+```{r}
+with(qdap_dat, wfm(state, person))
+```
+
+####1.2.2 tm’s Frequency Counts
+```{r}
+TermDocumentMatrix(tm_dat, control = list( removePunctuation = TRUE, wordLengths=c(0, Inf) ) )
+```
+Now we’ll Look at the tm output usinginspect.
+```{r}
+inspect(TermDocumentMatrix(tm_dat, control = list( removePunctuation = TRUE, wordLengths=c(0, Inf) ) ))
+```
+
+The two matrices are essentially the same, with the exception of column order and names. Notice that by default tm removes words with fewer characters (word length) and does not discard punctuation (we made the matrices equal by specifying removePunctuation = TRUE and wordLengths=c(0, Inf) for tm’s control argument). qdap takes the opposite approach, removing punctuation and utilizing all words, by default. Likewise, the tm package stores demographic information as meta data within the Corpus, whereas, qdap incorporates the demographics with the text into a single data.frame structure. These differences arise out of the intended uses, audiences, and philosophies of the packageauthors. Each has strengthsin particular situations. The qdap output is an ordinary matrix whereas the tm output is a more compact simple_triplet_matrix. While the storage is different, both packages can be made to mimic the default of the other. 
+
+Also note that the qdap summar ymethod for wfm provides the use rwith information similar to the TermDocumentMatrix/DocumentTermMatrix functions’ defaultprintmethod.
+```{r}
+summary(with(qdap_dat, wfm(state, person)))
+```
+Now we’ll look at some qdap functions that enable the user to move between packages,gaining the ﬂexibility and beneﬁts of both packages.
+
+###2 Converting Data Forms
+We’ll again use the following preset data:
+```{r}
+tm_dat <- qdap_dat <- DATA[1:4, c (1, 4) ] rownames (tm_dat) <- 
+     paste ("docs", 1: nrow (tm_dat)) tm_dat <- Corpus(DataframeSource (tm_dat[, 2, drop=FALSE]))
+
+qdap_wfm <- with (qdap_dat, wfm (state, person)) tm_tdm <- 
+     TermDocumentMatrix (tm_dat, control = list ( removePunctuation = TRUE, wordLengths= c (0, Inf) )
+```
+1. qdap_dat– is a qdap raw text form
+2. tm_dat– is a tm raw text format
+3. qdap_wfm– is a qdap word frequencies count
+4. tm_tdm– is a tm word frequencies count
+
+The reader is encouraged to view each of the data formats:
+```{r}
+qdap_dat; 
+qview(qdap_dat) 
+tm_dat; 
+inspect(tm_dat) 
+qdap_wfm; 
+summary(qdap_wfm) 
+tm_tdm; inspect(tm_tdm)
+```
+###2.1 Corpus to data.frame To move from aCorpusto adata.frametheas.data.framefunction is used as follows:
+```{r}
+as.data.frame(tm_dat)
+```
+
+###2.2 data.frame to Corpus 
+To move from adata.frameto aCorpustheas.Corpusfunction is used as follows:
+```{r}
+with(qdap_dat, as.Corpus(state, person))
+```
+
+###2.3 TermDocumentMatrix/DocumentTermMatrix to wfm 
+To move from aTermDocumentMatrixto awfmtheas.wfmfunction is used as follows:
+```{r}
+as.wfm(tm_tdm)
+```
+
+###2.4 wfm to TermDocumentMatrix/DocumentTermMatrix 
+To move from awfmto aTermDocumentMatrixorDocumentTermMatrixtheas.tdmandas.dtm functions can be used as follows:
+```{r}
+as.tdm(qdap_wfm) 
+as.dtm(qdap_wfm)
+```
+###2.5 Corpus to wfm 
+One can also move directly from a tm Corpusto a qdap wfm with the as.wfmfunction.
+```{r}
+as.wfm(tm_dat)
+```

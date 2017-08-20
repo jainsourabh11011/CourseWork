@@ -1,0 +1,254 @@
+---
+title: "Project Example1"
+output: html_document
+---
+
+##Setup
+###Load packages
+
+The following R packages are required for this analysis.
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(statsr)
+```
+
+###Load data
+
+The following code will load the data for the analysis from the compressed data source file into an R memory variable named gss (Note: The data file must be located in the same working directory as the R Markdown source file.)
+```{r}
+#load("gss.Rdata")
+load("C:\\Users\\czwea\\Documents\\GitHub\\Duke_Statistics_R\\Inferential\\project\\gss.Rdata")
+```
+
+##Part 1: Data
+
+The General Social Survey (GSS) is a project of the independent research organization NORC at the University of Chicago, with principal funding from the National Science Foundation. Since 1972, the GSS has been tracking trends in the characteristics, attitudes, and behaviors of American society using interview-based questionnaires.
+
+Data for all of the 30 years that the GSS was conducted is summarized into a single data file to allow trends across years to be identified. The GSS was conducted nearly annually prior to 1994, and then conducted every other year from 1994 forward.
+
+The surveyed sample size varies by survey year, ranging from a low of 1,466 to a high of 2,904, in total there are 57061 responses in the file provided. Prior to the 2006 survey, the sampled population was English-speaking individuals at least 18 years old and not living in institutional housing. Spanish-speaking individuals were added to the sampled population beginning in 2006.
+
+Quota sampling was used in the early years of the GSS up to 1977 when it was replaced by true probability sampling. The early quota sampling introduces strong selection bias elements into the results, meaning that the data from those years must be used carefully. Other sampling methodology changes were introduced in the 1980 survey.
+
+This is an observational study and not an experiment, thus no causal relationships can be determined using the data.
+
+Generalizability of results to the total American population is definitely suspect when considering the potentially highly-biased quota sampled years. Even so, as recently as 2006, the sampled population was changed to include Spanish-speakers. Generalizing population trends into earlier years needs to take into account that this demographic was specifically ignored for a time. And, what about other non-English-language speakers? Is there a statistically significant portion of the population not being captured in the survey results because of language bias? Answering this question is not within the scope of this analysis.
+
+Despite the inconsistencies in data collection methodology over the years, to simplify the analysis, it will be assumed that the survey results are reasonably generalizable to the American population.
+
+This analysis was done using an extract of the General Social Survey (GSS) Cumulative File 1972-2012 provided by the Coursera Data and Statistical Inference Course. The extract , and is provided for students learning statistical data analysis techniques. Some modifications were made to the data to remove missing values and to create factor variables for easier handling in R. Other than that, all data and coding come from the original data set.
+
+All information regarding the GSS, the data, and research methods was obtained from the GSS web site and/or the codebook for the General Social Survey Cumulative File, 1972-2012.
+
+##Part 2: Research question
+
+This analysis will explore public opinion regarding federal spending for the national space program. In particular, does the most recent GSS data reveal a change in public sentiment regarding federal spending on the space program?
+
+This question is interesting because many technologies that we enjoy today in every day products came from science and technology development for past space programs, Apollo in particular. The rigors of space and space travel push mankinds capabilities continuously to the edge of knowledge and practicality.
+
+If public sentiment impacts federal budget planning, and if public support for space program funding is waning then cutbacks to space programs could soon follow. This could have a very adverse affect on scientific advancement and technology development, which could, in turn lead, impact future product advancements. On the other hand, if support is rising then we could be on the verge of a technology boon ala the Apollo program; leading to products we can’t even imagine right now.
+
+##Part 3: Exploratory data analysis
+
+The specific GSS variable used in this analysis is natspac, which corresponds to the following question.
+
+“We are faced with many problems in this country, none of which can be solved easily or inexpensively. I’m going to name some of these problems, and for each one I’d like you to tell me whether you think we’re spending too much money on it, too little money, or about the right amount. a. Space exploration program.”
+
+The possible responses are “Too Little”, “About Right”, “Too Much”, and NA. Circumstances where the question was deemed inappropriate, the respondent did not have an answer (i.e., “Don’t Know”), or the data was for some reason missing were all coded as NA.
+
+While exploring the data set, it was discovered that all of the responses for the first survey year, 1972, were coded NA. The reason for this is unknown. The year 1972 was, therefore, excluded from the analysis.
+
+The chart below shows the trends in the responses over time.
+```{r}
+# Summarize the sample sizes for each year (because they do vary).
+# Filter out the first survey year (1972) because it only NA responses
+# to the survey question used in this analysis.
+ns <- gss %>% group_by(year) %>% filter(year > 1972) %>% summarise(n=n())
+
+# For each survey year, summarize the proportions for each response option to 
+# the space program spending question (the variable is natspac).
+# Again, filter out year 1972 (see above comments).
+cs <- gss %>% group_by(year, natspac) %>% filter(year > 1972) %>% summarise(c=n())
+ns$ptm <- cs[!is.na(cs$natspac) & cs$natspac == 'Too Much',]$c / ns$n
+ns$ptl <- cs[!is.na(cs$natspac) & cs$natspac == 'Too Little',]$c / ns$n
+ns$par <- cs[!is.na(cs$natspac) & cs$natspac == 'About Right',]$c / ns$n
+ns$pna <- cs[is.na(cs$natspac),]$c / ns$n
+
+# Plot the responses over time.
+g <- ggplot(data=ns, aes(x=year)) +
+    geom_line(aes(y=ptm, color='Too Much'), size=1.5) +
+    geom_line(aes(y=par, color='About Right'), size=1.5) +
+    geom_line(aes(y=ptl, color='Too Little'), size=1.5) +
+    geom_line(aes(y=pna, color='NA'), size=1.5) +
+    scale_color_manual(values=c('Too Much'='red', 'About Right'='green',
+                                'Too Little'='blue', 'NA'='yellow'),
+                       breaks=c('Too Much', 'About Right', 'Too Little', 'NA')) +
+    guides(color=guide_legend(title="Opinion")) +
+    labs(title="Perception of Space Program Spending", 
+         x="Survey Year", y="Percent of Respondents")
+print(g)
+```
+
+Clearly, the data for years prior to 1985 appears radically different than subsequent years; almost as if two entirely separate populations were surveyed. The author attributes this to changes that occurred in the sampling methodology at various times in the GSS project.
+
+Also apparent are three spikes in the percent of NA responses in the 1984, 1987, and 2006 survey data. The increase in NA responses these years appears to have a depressive effect on the other responses. Interestingly, 2006 is the year Spanish-speakers were included in the sample. Because the cause of these spikes is unknown and outside the scope of this analysis to determine, these years were also excluded from the data for analysis.
+```{r}
+# Summarize the sample sizes for each year (because they do vary).
+# Filter out the years not being used in the analysis.
+ns <- gss %>% group_by(year) %>% filter(year >= 1985 & !(year %in% c(1987, 2006))) %>% summarise(n=n())
+
+# For each survey year, summarize the proportions for each response option to 
+# the space program spending question (the variable is natspac).
+# Again, filter out the some of the years (see above comments).
+cs <- gss %>% group_by(year, natspac) %>% filter(year >= 1985 & !(year %in% c(1987, 2006))) %>% summarise(c=n())
+ns$ptm <- cs[!is.na(cs$natspac) & cs$natspac == 'Too Much',]$c / ns$n
+ns$ptl <- cs[!is.na(cs$natspac) & cs$natspac == 'Too Little',]$c / ns$n
+ns$par <- cs[!is.na(cs$natspac) & cs$natspac == 'About Right',]$c / ns$n
+ns$pna <- cs[is.na(cs$natspac),]$c / ns$n
+
+# Plot the responses over time.
+g <- ggplot(data=ns, aes(x=year)) +
+    geom_line(aes(y=ptm, color='Too Much'), size=1.5) +
+    geom_line(aes(y=par, color='About Right'), size=1.5) +
+    geom_line(aes(y=ptl, color='Too Little'), size=1.5) +
+    geom_line(aes(y=pna, color='NA'), size=1.5) +
+    scale_color_manual(values=c('Too Much'='red', 'About Right'='green',
+                                'Too Little'='blue', 'NA'='yellow'),
+                       breaks=c('Too Much', 'About Right', 'Too Little', 'NA')) +
+    guides(color=guide_legend(title="Opinion")) +
+    labs(title="Perception of Space Program Spending", 
+         x="Survey Year", y="Percent of Respondents")
+print(g)
+```
+
+The chart above shows the cleaned data for n=16 survey years.
+
+It appears from the chart that the proportion of NA and “About Right” responses have remained fairly stable over the years. The proportion of “Too Much” responses shows an interesting downturn in recent survey years along with what appears to be a corresponding upward trend in the proportion of “Too Little” responses.
+
+The following shows the number of responses for each response category for each survey year.
+```{r}
+df <- as.data.frame(cs) %>% spread(key=natspac, value=c)
+df$all <- ns$n
+print(df)
+```
+
+##Part 4: Inference
+
+The null hypothesis for this analysis is that the most recent survey results are expectable given prior survey results. In other words, public sentiment for space program spending has not changed from historical norms. The alternative hypothesis is that the most recent results are significantly different from historical norms; indicating a possible change in public opinion of space program spending, either for better or for worse.
+
+The first step is to examine whether the data is suitable for inferencing techniques. The inference target is the overall U.S. American population. The survey sample size for each year certainly meets the criteria of being less than 10% of the target population. Data for survey years prior to 1977 do not meet the random selection criteria because quota sampling was done. Subsequent years, however, do meet the criteria. For this reason, this analysis did not use data prior to the 1977 survey year. The number of observations for the categorical variable used in this analysis satisfy the requirement that there be at least 10 observations for each response. Finally, each categorical response is independent from the other responses (each survey observation is not counted in more than one response category).
+
+To begin, 95% confidence intervals were calculated for each response category for the most recent survey year (2012). The results are shown in the chart below.
+```{r}
+# Calculate standard errors, margins of error, 95% confidence intervals for the
+# 2012 survey year responses.
+lastyr <- ns[nrow(ns),]
+septm <- sqrt((lastyr$ptm * (1 - lastyr$ptm)) / lastyr$n)
+septl <- sqrt((lastyr$ptl * (1 - lastyr$ptl)) / lastyr$n)
+separ <- sqrt((lastyr$par * (1 - lastyr$par)) / lastyr$n)
+sepna <- sqrt((lastyr$pna * (1 - lastyr$pna)) / lastyr$n)
+me95ptm <- 1.96 * septm
+me95ptl <- 1.96 * septl
+me95par <- 1.96 * separ
+me95pna <- 1.96 * sepna
+ci95tm <- lastyr$ptm + (c(1, -1) * me95ptm)
+ci95tl <- lastyr$ptl + (c(1, -1) * me95ptl)
+ci95ar <- lastyr$par + (c(1, -1) * me95par)
+ci95na <- lastyr$pna + (c(1, -1) * me95pna)
+
+# Calculate the means of each response proportion over all of the survey
+# years included in the analysis.
+mnptm <- mean(ns$ptm)
+mnptl <- mean(ns$ptl)
+mnpar <- mean(ns$par)
+mnpna <- mean(ns$pna)
+
+df <- data.frame(
+    resp = factor(c('Too Little', 'About Right', 'Too Much', 'NA')),
+    prop = c(lastyr$ptl, lastyr$par, lastyr$ptm, lastyr$pna),
+    mean = c(mnptl, mnpar, mnptm, mnpna),
+    me95 = c(me95ptl, me95par, me95ptm, me95pna),
+    plt = c(1, 1, 1, 2))
+g <- ggplot(data=df, aes(x=resp)) +
+     geom_point(aes(y=prop), size=2) + 
+     geom_errorbar(aes(ymax=prop + me95, ymin=prop - me95), width=0.2, color='blue') +
+     geom_point(aes(y=mean), color='green', shape=17, size=3) + 
+     facet_wrap(~ plt, scales='free') + 
+     theme(strip.background = element_blank(), strip.text.x = element_blank()) +  
+     labs(title="95% Confidence Intervals", 
+          x="Survey Response Categories", y="Percent of Responses")
+print(g)
+```
+
+The black dots represent the number of responses in each response category as a proportion of all the 2012 responses. The blue error bars show the 95% confidence interval range.
+
+The green triangles represent the expected values of the proportions for each response category. The expected proportions were calculated as the mean of the response proportions for all data used in the analysis. It seemed reasonable to use the overall mean in this way as no other estimate for the expected proportions is available. If the recent survey results are consistent with previous results then they should not be statistically far from the historical mean.
+
+The expected proportions for the “About Right” and NA responses are well within the confidence interval ranges, which is not surprising given the nearly flat line for these categories in the previous chart. However, the expected proportions for the “Too Little” and “Too Much” responses are well outside the confidence interval ranges for these categories.
+
+In order to evaluate if these differences are statistically significant, a chi-square goodnes of fit test was conducted. A chi-square test was chosen because the analysis uses a categorical variable and is primarily concerned with whether the proportions of the survey responses for each possible value of that variable have differed from what might reasonably be expected. This is pretty much a textbook example of what this test is good for.
+
+What follows are the chi-square test results.
+```{r}
+# Set up the observed responses vector.
+ctl <- cs[cs$year==2012 & !is.na(cs$natspac) & cs$natspac == 'Too Little',]$c
+ctm <- cs[cs$year==2012 & !is.na(cs$natspac) & cs$natspac == 'Too Much',]$c
+car <- cs[cs$year==2012 & !is.na(cs$natspac) & cs$natspac == 'About Right',]$c
+cna <- cs[cs$year==2012 & is.na(cs$natspac),]$c
+observed <- c(ctl, ctm, car, cna)
+
+# Set up the vector of expected response proportions based on the overall mean
+# of the proportions from all survey years.
+expected <- c(mnptl, mnptm, mnpar, mnpna)
+
+# Perform a chi-square goodness of fit test.
+chisq_test <- chisq.test(x=observed, p=expected)
+print(chisq_test)
+```
+With a high X-squared value (67.667) and a near zero p value (1.348e-14), we can confidently reject the null hypothesis that the most recent observed responses would be expected and accept the alternative hypothesis that these results represent a statistically significant deviation from expectations at a alpha=0.05 significance level.
+
+Given a statistically significant result from the chi-square test, a series of post-hoc tests were done to determine which of the response categories are responsible for the results. This was done by doing chi-square tests comparing each response category individually against the sum of the other categories. For example, the number of “Too Much” responses were compared against the sum of the counts for the other categories. The expected proportions for the other categories were added together to get the expected proportion for the non-“Too Much” categories.
+
+This procedure was followed for each of the response categories. A Bonferroni correction was applied to the significance level, dividing it by four (the number of individual chi-square tests performed) to derive an adjusted level of 0.0125 for each test.
+
+The results of the post-hoc analysis is shown below.
+```{r}
+# To post-hoc test which response categories show significant change from 
+# expectations, conduct binomial chi-square tests comparing each category
+# individually against the combination of all the other.
+
+# Compare response category "Too Low" against the others.
+observed <- c(ctl, ctm + car + cna)
+expected <- c(mnptl, mnptm + mnpar + mnpna)
+chisq_test1 <- chisq.test(x=observed, p=expected)
+
+# Compare response category "About Right" against the others.
+observed <- c(car, ctm + ctl + cna)
+expected <- c(mnpar, mnptm + mnptl + mnpna)
+chisq_test2 <- chisq.test(x=observed, p=expected)
+
+# Compare response category "Too Much" against the others.
+observed <- c(ctm, ctl + car + cna)
+expected <- c(mnptm, mnptl + mnpar + mnpna)
+chisq_test3 <- chisq.test(x=observed, p=expected)
+
+# Compare response category NA against the others.
+observed <- c(cna, ctm + car + ctl)
+expected <- c(mnpna, mnptm + mnpar + mnptl)
+chisq_test4 <- chisq.test(x=observed, p=expected)
+
+# Prettify the results for display.
+df <- data.frame(
+    p = c(format(chisq_test1$p.value, digits=4),
+          format(chisq_test2$p.value, digits=4),
+          format(chisq_test3$p.value, digits=4),
+          format(chisq_test4$p.value, digits=4)),
+    s = c('***', '', '***', ''))
+row.names(df) <- c('Too Little', 'About Right', 'Too Much', 'NA')
+colnames(df) <- c('p Value', 'Sig')
+print(df)
+```
+
+From the p values, it is clear that the “Too Much” and “Too Little” responses account for the rejecting the null hypothesis. This is consistent with what is shown on the previous charts.

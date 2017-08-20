@@ -1,0 +1,90 @@
+---
+title: "Project Example2"
+output: html_document
+---
+
+#Analysis of the change in childrens per parent from 1980 to 2010
+
+
+##Load packages
+```{r warning=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+```
+##Load data
+```{r}
+load("C:\\Users\\czwea\\Documents\\GitHub\\Duke_Statistics_R\\Inferential\\project\\gss.Rdata")
+```
+##Part 1: Data
+
+The GSS is a dataset colletec anually across the US to monitor changes in society. The dataset is collected through interviews conducted after 3:00 p.m. on weekdays or during weekends and holidays. The sample set is selected through a multi-stage blocking scheme by geographical area with first a sampling across standard metropolitan statistical areas, and then secondly a sampling across block groups and enumeration districts. Within each of these final blocks a stratified sampling technique across race and income was used. These blocks were selected with a probability proportional to their population size. Within each final block a sample of an average size of 5 was selected.
+
+Within the document http://gss.norc.org/documents/codebook/GSS_Codebook_AppendixA.pdf a detailed description is given about special considerations that one should be careful of for different time periods within the data set. E.g an over sampling of black people in some periods and careful considerations of female employment status and its changes.
+
+Considering that great care has been taken in randomly selecting participants so that they represent the geographical changes across the US and locally it seems reasonably to generalize results from the GSS to the entire population of the US. As mentioned in the previous paragraph there are however a number of concerns that one can consider for different use-cases.
+
+Since the dataset represents an observational study it is imposible to infere anything about causality between variables.
+
+##Part 2: Research question
+
+In this report I want to investigate if the average number of children that each respondant ever had has changed from 1980 to 2010. This is interesting to investigate because it highlights a growing concern that the proportion of retired people to working people will increase significantly in the coming years because there are not sufficient children born to support this growing propertion of elderly people.
+
+##Part 3: Exploratory data analysis
+
+The number of children a respondant has ever had is in the column childs. An interesting plot is thus to look at the average number of children per respondant grouped by year. This plot is generated from the following code, and shown below:
+```{r}
+ggplot(data = gss %>% filter(!is.na(childs)) %>%group_by(year) %>% summarise(nchild = mean(childs)), aes(x = year, y = nchild)) + geom_line() + geom_point()
+```
+
+From the above figure it seems clear that there is an overall reduction in the number of children in the period and especially since the 1970’es the number of children has increased. There however also seem to be a returning increase in the period from 2005’ish moving forward.
+
+For the years 1980 and 2010, which are the one of interest for this study, it is interesting to look at the distribution of responses. This can be summarised as
+```{r}
+  gss %>% filter(year %in% c(1980, 2010)) %>% group_by(year, childs) %>% summarise(n = n())
+```
+and plotted as
+```{r}
+ggplot(data = gss %>% filter(year %in% c(1980, 2010), !is.na(childs)), aes(x = childs, fill = factor(year))) + 
+     geom_histogram(binwidth = 1) + scale_x_continuous(breaks = 0:8) + 
+     xlab("Number of children") + ylab("Count")
+```
+
+First it is noted that only three responses for each year has responded NA, and it therefore seems valid to simply ignore these three results. Secondly the data shows that in 1980 about 1500 responses was collected and in 2010 about 2000 responses was collected showing that both groups has a reasonable sample size. Looking at the histogram, even disregarding the larger sample size of the dataset from 2010 it is clear that a larger propertion of the population has had no children in 2010 than in 1980.
+
+##Part 4: Inference
+
+The research question posed in part 2 can be rephrased as the hypothesis “is the average number of children per parent different in 2010 than it was in 1980”. The null hypothetis is thus 
+
+R0:μ1980=μ2010  
+R0:μ1980=μ2010  
+
+ and the alternate hypothesis is 
+ 
+RA:μ1980≠μ2010  
+RA:μ1980≠μ2010  
+
+To verify the above hypothesis I want to employ a t-test. In order to do this I must first verify the two conditions required in order to use a t-test. Specifically I must verify, for each sample, that the two conditions of independence of observations and nearly normality is met.
+
+The requirement of independent observations is easily met for both sample sets since a sample size of around 2000 observations is easily a smaller number than 10 % of the US population. The requiremtn of a nearly normal distributed sample is a bit more tricky, since looking at the histogram of the data shown in the previous part it is quite clear that the distribution of heavily right skewed. The distribution must of couse be right skewed since having between 0-2 children is the predominant cases with a higher number of children being significantly less likely. However since both data sets are so large (way more than 30 observations in each sample) the condition of normality can be laxed so much that we can still apply the t-test for this analysis.
+
+The differense in the two means together with a confidense interval can now be calculated using the procedure described in section 5.3.1 of the OpenIntro statistics book. This method is implemented in the inference method used during the course, and can be calculated as
+```{r}
+d <- gss %>% filter(year %in% c(1980, 2010), !is.na(childs)) %>% select(year, childs)
+inference(data = d, x = as.factor(year), y = childs, type = "ci", statistic = "mean", method = "theoretical")
+```
+
+From the above calculation we get a confidense interval for the differense μ1980−μ2010 μ1980−μ2010 of (0.023, 0.2677) which means that we are 95 % confident that there is a decrease in the number of children per set of parents of 0.023 to 0.2677 children.
+
+Instead of calculating confidense intervals for the differense in mean it is also possible to do a hypothesis test. This can also be calculated using the inference method, as:
+```{r}
+inference(data = d, x = as.factor(year), y = childs, type = "ht", statistic = "mean", method = "theoretical", 
+          null = 0, alternative = "twosided")
+```
+
+Notice that it is a twosided hypothesis test because we are looking for a change in either direction. The null parameter is set to 0, since the null hypothesis is that the two means are equal. Since the p-value is less than 0.05 we can reject the null hypothesis and conclude that there is evidence for a decline in the number of children per parents in the period from 1980 to 2010.
+
+Notice that there is agreement between the confidense interval (they do not include the value 0.00) and the rejection of the null hypothesis.
+
+In summary, using the GSS data it was determined that a null hypothesis claiming no signficant change from historical expectations in the American population’s opinion of space program spending can be rejected with a 95% confidence level. It appears from the data that public sentiment that too much is being spent is decreasing while opinion that too little is being spent is increasing.
+

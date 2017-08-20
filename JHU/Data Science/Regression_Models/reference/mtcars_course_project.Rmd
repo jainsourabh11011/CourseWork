@@ -1,0 +1,137 @@
+---
+title: "Regression Models Course Project - mtcars"
+author: 
+date: 
+output: 
+    html_document:
+        theme: cosmo
+        highlight: kate
+---
+## Context  
+
+You work for Motor Trend, a magazine about the automobile industry. Looking at a data set of a collection of cars, they are interested in exploring the relationship between a set of variables and miles per gallon (MPG) (outcome). They are particularly interested in the following two questions:  
+
+- "Is an automatic or manual transmission better for MPG”  
+- "Quantify the MPG difference between automatic and manual transmissions"  
+
+## Executive Summary  
+Based on the model created in this analysis, take MPG as outcome, the predictors include weight, number of cylinders, transmission type, and the interaction between weight and transmission type. Manual transmission has better MPG than auto. The MPG difference could be approximately quantified as: With weight and number of cylinders being equal, a car with manual transmission will have an improved MPG in the value of 11.9 minus 2.4 times the weight of car divided by 1,000, subtract the number of cylinders mutiplied by 1.2, further subtract 4.2 times the weight divided by 1,000, finally plus 34.3.  
+
+## Full Analysis  
+
+#### Exploratory Data Analysis  
+First, load the data and examine the data strucutre (Figure 1). Looks like among 32 observations, it is fairely an even split between two groups in question (19 auto, 13 manual). Now create a boxplot to examine which one has better MPG on average (Figure 2). The boxplot indicates that manual transmission has better MPG than auto.    
+
+#### Model Selection  
+*Forward-Selection* model selection strategy is used here. First, create a basic model with a single variable: transmission type (am) (Figure 3).  
+
+This model has an Estimate **p-value lower than 0.05**, thus proving there is a linear correlation between type of transmission to MPG.  
+
+Next, we add one more predictor into this model. The next most likely one is weight (wt) (Figure 4).  Model 2's **coefficients all have low p-values**; it also has a better **Adjusted R-squared value**, suggesting both predictors need to be included in the final model.  
+
+For Model 3, test if there is an interaction between transmission type and weight (Figure 5). Assumpetion is true. We also have reached a better **Ajusted R-squared value 0.815** while maintaining **low p-vlaues for all coefficients**.   
+
+Now another predictor will be added: cylinder number (cyl) (Figure 6). **Low p-values, better Adjusted R-squared value as 0.853**. All the above predictors need to be selected. There also is no interaction between wt and cyl (Figure 7); but there is an interaction between cyl and am (Figure 8), however the **Adjusted R-squared value** is not as high as **0.853**.    
+
+Adding the rest of the varaibles one by one and examine the coefficents p-values as well as if Adjusted R-squared improves, we cannot find any other predictors that improves the current model (process omitted from this analysis). Our final model is Model 4 in Figure 6:  
+
+```{r}
+fit4 <- lm(mpg ~ am*wt + cyl, mtcars)
+```
+
+#### Residuals examination  
+Figure 9 exmmines the residuals vs. fitted values, as well as standardized residuals theoretical quantiles. The conclusions is there does not seem to be significant outliers other than three instances (the ones noted in the graph).  
+
+#### Confidence Intervals  
+
+```{r}
+coef <- summary(fit4)$coef
+coef <- data.frame(coef)
+interval <- function(r) {
+    r[1] + c(-1,1) * qt(.975, 27) * r[2]
+}
+t(apply(coef, 1, interval))
+```
+
+
+#### Answers to the Questions  
+
+- "Is an automatic or manual transmission better for MPG”  
+Because the coefficient for **am** is **positive (11.9385)**, and am takes 1 as the value for manual, **manual transmission** is better for MPG.  
+
+- "Quantify the MPG difference between automatic and manual transmissions"  
+With weight and number of cylinders being equal, a car with manual transmission will have an improved MPG in the value of **11.9385 minus 2.3689 times the weight of car divided by 1,000, subtract the number of cylinders mutiplied by 1.1814, further subtract 4.1974 times the weight divided by 1,000, finally plus 34.2830.** (refer to figure 6's coefficients)   
+
+
+## Appendix
+
+### Figure 1  
+```{r, cache=TRUE, fig.width=6, fig.height=4}
+head(mtcars, n=3)
+## how many cobservations
+nrow(mtcars)
+## the distribution between two kinds of transmissions
+table(mtcars$am)
+```
+
+### Figure 2  
+```{r, cache=TRUE, fig.width=3, fig.height=2}
+library(ggplot2)
+ggplot(mtcars, aes(as.factor(am), mpg)) + geom_boxplot() + theme_bw() + labs(x="0=Auto, 1=Manual")
+```
+
+### Figure 3  
+
+```{r}
+fit1 <- lm(mpg ~ am, mtcars)
+summary(fit1)$coef
+summary(fit1)$adj.r.squared
+```
+
+### Figure 4  
+
+
+```{r}
+fit2 <- lm(mpg ~ am + wt, mtcars)
+summary(fit2)$coef
+summary(fit2)$adj.r.squared
+```
+
+### Figure 5  
+
+```{r}
+fit3 <- lm(mpg ~ am*wt, mtcars)
+summary(fit3)$coef
+summary(fit3)$adj.r.squared
+```
+
+### Figure 6 - FINAL MODEL    
+
+```{r}
+fit4 <- lm(mpg ~ am*wt + cyl, mtcars)
+summary(fit4)$coef
+summary(fit4)$adj.r.squared
+```
+
+### Figure 7  
+
+```{r}
+fit5 <- lm(mpg ~ am*wt + cyl*wt, mtcars)
+summary(fit5)$coef
+summary(fit5)$adj.r.squared
+```
+
+### Figure 8  
+```{r}
+fit6 <- lm(mpg ~ am*wt + cyl*am, mtcars)
+summary(fit6)$coef
+summary(fit6)$adj.r.squared
+```
+
+### Figure 9
+
+```{r, fig.height=4,fig.width=8}
+par(mfrow = c(1,2), mar = c(4, 4, 2, 1))
+plot(fit4, which=1)
+plot(fit4, which=2)
+```

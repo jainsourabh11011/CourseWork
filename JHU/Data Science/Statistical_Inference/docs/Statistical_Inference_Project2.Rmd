@@ -1,0 +1,169 @@
+---
+output: pdf_document
+geometry: margin=.5in
+fontsize: 10pt
+---
+\begin{center}
+JHU Project 2: Inferential Analysis on ToothGrowth Data  
+\end{center}
+\begin{center}
+Cliff Weaver - September 22, 2015
+\end{center}
+```{r echo=FALSE, hidden=TRUE, r.options("scipen"=100)}
+# Use this to create Latex equations: http://www.codecogs.com/latex/eqneditor.php
+# scipen stops the automatic format of large/small vlaues from using scientific notation.
+```
+```{r echo=FALSE, hidden=TRUE, }
+#options("scipen"=100) #to suppress scientific notation - makes p values easier to understand
+```
+###Overview
+The 2nd part of the Statistical Inference Project involves analysis the ToothGrowth data in the R datasets package. This following approach is required: 
+
+1. Load the ToothGrowth data and perform basic exploratory data analyses. 
+2. Provide a basic summary of the data. 
+3. Use confidence intervals and hypothesis tests to compare tooth growth by supplement and dose. (Use the techniques from class.) 
+4. State the conclusions and the assumptions.   
+
+The output will be evaluated on:  
+
+* **Requirement 1**: Perform exploratory data analysis of at least a single plot or table highlighting basic features of the data.
+* **Requirement 2**: Perform relevant confidence intervals and/or tests.
+* **Requirement 3**: Demonstrate the results of the tests and/or intervals are interpreted correctly. 
+* **Requirement 4**: Document the assumptions needed for the conclusions.
+
+###Requirement 1: *Perform an exploratory data analysis of at least a single plot or table highlighting basic features of the data*
+
+####Description of the data:
+The tooth growth data comes from testing the effect of Vitamin C on tooth growth in Guinea Pigs. The dataset was developed to determine if pharmaceutical-sourced ascorbic acid is as effective as Vitamin C in orange juice in maintaining healthy tooth growth.
+
+####Basic summary of the data:
+Load the dataset and take a peek at the data to see what it looks like:
+```{r, summary1, echo=FALSE}
+data(ToothGrowth)
+head(ToothGrowth, 3)
+#summary(ToothGrowth)
+```
+There are 60 observations total: 30 each of two supplements, Orange Juice (**OJ**) and Vitamin C (**VC**). In each set of 30, there are 10 samples each for 0.05, 1.0 and 2.0 mg dose levels.
+Let's look at a summary data sorted by supplement (OJ vs VC):
+```{r, summary2, echo=FALSE, warning=FALSE}
+suppressMessages(library(dplyr))
+ToothGrowth %>%
+        group_by(supp) %>%
+        select(len, supp) %>%
+        summarise_each(funs(min(., na.rm=TRUE), max(., na.rm=TRUE), median(., na.rm=TRUE),mean(., na.rm=TRUE), sd(., na.rm=TRUE)))
+```
+We see the range for toothlength for OJ is 22.7 and the VC range is larger with 29.7.  VC also has more variability shown by the larger standard deviation (8.3 vs 6.6).
+And now compare  the data by dose:
+```{r, summary3, echo=FALSE}
+ToothGrowth %>%
+        group_by(dose) %>%
+        select(len, dose) %>%
+        summarise_each(funs(min(., na.rm=TRUE), max(., na.rm=TRUE), median(., na.rm=TRUE), mean(., na.rm=TRUE), sd(., na.rm=TRUE)))
+```
+Note that the 2.0 dose have a lower standard deviation than the other two lower doses while having a greater range of values.
+Before starting a formal statisitcal analysis, we must review the requirements for T-Tests (appropriate for small sample sizes):
+
+1. _Independence of observations_:  The observations in the ToothGrowth dataset are believed to be a simple random sample and consist of less than 10% of the Guinea Pig population and therefore independence is a reasonable conclusion.  
+2. _Observations come from a nearly normal distribution_:  This can be challenging to verify with small datasets like the ToothGrowth data.  Typically, a researcher will take a look at a plot of the data and note any significant outliers and whether any previous experiences alert us the data may not be nearly normal.  While the OJ histogram appears skewed, we cannot definitively reach a conclusion. The  analysis his could be validated with more sampling or bootstrap analysis. (This is outside the scope of the project.)  Also, there is no past experience that warn us the sample distribution would not be near normal.  Let's look at the supporting histograms and boxplots:
+
+```{r skew1, echo=FALSE, fig.height=2}
+suppOJ <- filter(ToothGrowth, supp=="OJ")
+suppVC <- filter(ToothGrowth, supp=="VC")
+par(mfcol=c(1,3))
+hist(ToothGrowth$len, col="lightblue", main = "OJ & VC", xlab="Tooth Length")
+hist(suppOJ$len, col="lightgreen", main = "Orange Juice (OJ)", xlab="Tooth Length")
+hist(suppVC$len, col="pink", main = "Ascorbic Acid (VC)", xlab="Tooth Length")
+```
+
+The OJ histogram hints at skewness but with only 10 samples it is not possible to make a definitive conclusion.  The others appear near normal.  
+```{r, boxPlot1, echo=FALSE, warning=FALSE, fig.height=3}
+library(ggplot2)
+ggplot(ToothGrowth, aes(x=factor(dose), y=len, fill=supp)) + geom_boxplot() + scale_color_hue(1-10, c=10) + theme(legend.position="right",   legend.title=element_blank(),legend.background = element_rect(fill="gray90", size=.5, linetype="dotted" )) + 
+     labs(x="Dose", y="Tooth Length")
+```
+
+The box plot suggests that higher doses of both OJ and VC promote tooth growth.  Also, the data suggests OJ is more effective in promoting tooth growth than VC at lower doses. Now that we have an idea what the data looks like and thus satisfying **Requirement:1**, we'll perform some statistical tests against the data.
+
+### Requirement 2: *Perform relevant confidence intervals and/or tests*
+
+####Hypothesis Testing:
+Let's now perform hypothesis testing which is a formal technique for evaluating two competing possibilities.  The null hypothesis (H~0~) typically represents a claim to be tested.  The alternative hypothesis (H~A~) is an alternative claim and is often represented by a range of possible values for the item of interest.
+We will reject H~0~ in favor of H~A~ when we find a p-value of less than 0.05.
+####Hypothesis Test #1:
+The null hypothesis, H~0~, is that tooth lengths are the same for both supplement types (VC or OJ).
+```{r, tTest1, echo=FALSE}
+dose05VC <- filter(ToothGrowth, dose==0.5, supp=="VC")
+dose05OJ <- filter(ToothGrowth, dose==0.5, supp=="OJ")
+dose1VC <- filter(ToothGrowth, dose==1.0, supp=="VC")
+dose1OJ <- filter(ToothGrowth, dose==1.0, supp=="OJ")
+dose2VC <- filter(ToothGrowth, dose==2.0, supp=="VC")
+dose2OJ <- filter(ToothGrowth, dose==2.0, supp=="OJ")
+# Perform t test on vc vs oj at 0.5mg dose
+tTest_VC_OJ_05 <- t.test(len ~ supp, data=rbind(dose05VC,dose05OJ), var.equal=FALSE)
+# Perform t test on vc vs oj at 1.0mg dose
+tTest_VC_OJ_10 <- t.test(len ~ supp, data=rbind(dose1VC,dose1OJ), var.equal=FALSE)
+# Perform t test on vc vs oj at 2.0mg dose
+tTest_VC_OJ_20 <- t.test(len ~ supp, data=rbind(dose2VC,dose2OJ), var.equal=FALSE)
+```
+Compare | Dose | P-Value | Confidence Int Lower Limit | Confidence Int Upper Limit
+----------|-------|----------------------------|--------------------------------|-------------------------------
+VC and OJ | 0.5mg | $`r tTest_VC_OJ_05$p.value`$ | $`r tTest_VC_OJ_05$conf.int[1]`$ | $`r tTest_VC_OJ_05$conf.int[2]`$
+VC and OJ | 1.0mg | $`r tTest_VC_OJ_10$p.value`$ | $`r tTest_VC_OJ_10$conf.int[1]`$ | $`r tTest_VC_OJ_10$conf.int[2]`$
+VC and OJ | 2.0mg | $`r tTest_VC_OJ_20$p.value`$ | $`r tTest_VC_OJ_20$conf.int[1]`$ | $`r tTest_VC_OJ_20$conf.int[2]`$
+
+####Hypothesis Test #2: Null hypothesis (H~0~) is that tooth lengths are the same for each dose level (0.05, 1.0 and 2.0 mg).
+
+```{r echo=FALSE}
+# Perform t test on 0.5mg vs 1.0mg, within each supplement
+tTest_VC_05_10 <- t.test(len ~ dose, data=rbind(dose05VC,dose1VC), var.equal=TRUE)
+tTest_OJ_05_10 <- t.test(len ~ dose, data=rbind(dose05OJ,dose1OJ), var.equal=TRUE)
+
+# Perform t test on 1.0mg vs 2.0mg, within each supplement
+tTest_VC_10_20 <- t.test(len ~ dose, data=rbind(dose1VC,dose2VC), var.equal=TRUE)
+tTest_OJ_10_20 <- t.test(len ~ dose, data=rbind(dose1OJ,dose2OJ), var.equal=TRUE)
+
+# Perform t test on 0.5mg vs 2.0mg, within each supplement
+tTest_VC_05_20 <- t.test(len ~ dose, data=rbind(dose05VC,dose2VC), var.equal=TRUE)
+tTest_OJ_05_20 <- t.test(len ~ dose, data=rbind(dose05OJ,dose2OJ), var.equal=TRUE)
+```
+Compare | Supplement | P-Value | Confidence Int Lower Limit | Confidence Int Upper Limit
+--------|------------|---------|----------------------------|---------------------------
+0.5mg and 1.0mg | VC | $`r tTest_VC_05_10$p.value`$ | $`r tTest_VC_05_10$conf.int[1]`$ | $`r tTest_VC_05_10$conf.int[2]`$
+0.5mg and 1.0mg | OJ | $`r tTest_OJ_05_10$p.value`$ | $`r tTest_OJ_05_10$conf.int[1]`$ | $`r tTest_OJ_05_10$conf.int[2]`$
+1.0mg and 2.0mg | VC | $`r tTest_VC_10_20$p.value`$ | $`r tTest_VC_10_20$conf.int[1]`$ | $`r tTest_VC_10_20$conf.int[2]`$
+1.0mg and 2.0mg | OJ | $`r tTest_OJ_10_20$p.value`$ | $`r tTest_OJ_10_20$conf.int[1]`$ | $`r tTest_OJ_10_20$conf.int[2]`$
+0.5mg and 2.0mg | VC | $`r tTest_VC_05_20$p.value`$ | $`r tTest_VC_05_20$conf.int[1]`$ | $`r tTest_VC_05_20$conf.int[2]`$
+0.5mg and 2.0mg | OJ | $`r tTest_OJ_05_20$p.value`$ | $`r tTest_OJ_05_20$conf.int[1]`$ | $`r tTest_OJ_05_20$conf.int[2]`$
+
+The T Tests have been properly designed and completed.  This completes **Requirement 2**. A thoughtful analysis is provided below per the project requirements
+
+###Requirement 3: *Demonstrate the results of the tests and intervals are interpreted correctly*
+
+####Hypothesis Test #1:  
+Recall our H~O~ was tooth lengths are the same for both supplement types (VC or OJ).  Reviewing the results we can determine:
+
+* We must reject H~O~ because the first two tests fail because of the very small p values. (Also the confience interval does not include 0 so the means cannot be equal.)  Therefore there is evidence that OJ and VC may impact tooth growth differently.  (Note this is consistent to what we thought might be the case when initially looking at the data.)
+* The data suggests the H~O~ should be accepted for 2.0 mg of OJ and VC because 0.964 > 0.05.
+
+####Hypothesis Test #2: 
+Recall our H~O~ was tooth lengths are the same regardless of dose level. Reviewing the results we can determine:
+
+* The p-values are are much less than 0.05; therfore, we must reject our H~O~ and recognize that does level does appear to impact tooth growth.  This is consistent with our intial review of the dataset.
+
+####Overall Conclusion:
+The statistical tests above provide the following insight:
+
+* Dosage has influence on tooth length. The higher the dosage (up to 2 mg, no data is available beyond this point), the longer the teeth. 
+* The delivery method is important when the dosage is between 0.5 and 1 mg, but is no longer of influence when dosing 2 mg (more data would be needed to get a more accurate threshold), with orange juice being more effective than ascorbic acid.
+
+A review of the statistical tests and conficence intervals is complete thereby satisfying **Requirement:3**.
+
+##Requirement 4: *Describe the assumptions needed for their conclusions*
+As with all statistical tests, assumptions on the data are made.
+Assumptions:
+
+* The guinea pigs are repesentative for the population of guinea pigs. 
+* The dosage and supplement were randomly assigned.
+* The the distribution of the means is normal.
+
+The assumptions made on which the statistical conclusions were made are listed above thereby satisfying **Requirement:4**.

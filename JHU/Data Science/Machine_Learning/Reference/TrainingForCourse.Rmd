@@ -1,0 +1,381 @@
+
+
+Project:  
+
+http://rstudio-pubs-static.s3.amazonaws.com/21929_87ef7c03610a45b39f2350ad5b0968e6.html
+https://rstudio-pubs-static.s3.amazonaws.com/29426_041c5ccb9a6a4bedb204e33144bb0ad4.html
+http://rpubs.com/marcusbrown/Coursera_PML_project
+https://rpubs.com/DIM302/PracticalMachineLearning
+http://www.nicolomarchi.it/projects/practicalmachinelearning/exercise.html
+http://fss14142.github.io/CourseraMachineLearningProject/project.html
+
+## Quiz 1
+# Problem 1.
+Which of the following are steps in building a machine learning algorithm?
+ANS: Deciding on an algorithm, Creating features, Evaluating the prediction.
+
+# Problem 2.
+Suppose we build a prediction algorithm on a data set and it is 100% accurate on that data set. 
+Why might the algorithm not work well if we collect a new data set?
+ANS: Our algorithm may be overfitting the training data, predicting both the signal and the noise.
+
+# Problem 3.
+typical sizes for the training and the test sets:
+ANS: 60% in the training set, 40% in the testing set.
+
+# Problem 4. 
+What are some common error rates for predicting binary variables (i.e. variables with two possible # values like yes/no, disease/normal, clicked/didn't click)?
+ANS: Specificity, Sensitivity
+
+# Problem 5.
+Suppose that we have created a machine learning algorithm that predicts whether a link will be 
+clicked with 99% sensitivity and 99% specificity. The rate the link is clicked is 1/1000 of 
+visits to a website. If we predict the link will be clicked on a specific visit, 
+what is the probability it will actually be clicked?
+```{r}
+100,000 visits => 100 clicks
+99% = sensitivity = TP/(TP+FN) = 99/(99+1) = 99/100
+99% specificity =TN/(TN+FP) = 98901/(98901+999) = 98901/99900
+P(actually clicked|clicked) = TP/(TP+FP) = 99/(99+999) = 9%
+```
+# Quiz 2
+
+Resources:
+
+https://rstudio-pubs-static.s3.amazonaws.com/86226_2f11ea012e23432aa1c3980e3f4f909b.html
+http://www.rpubs.com/iammxt/pmachlearn-quiz2
+
+
+# Problem 1.
+```{r}
+library(AppliedPredictiveModeling)
+library(caret)
+data(AlzheimerDisease)
+
+adData = data.frame(diagnosis, predictors)
+testIndex = createDataPartition(diagnosis, p=0.50, list=FALSE)
+training = adData[-testIndex,]
+testing = adData[testIndex,]
+```
+## OR
+training = adData[trainIndex,]
+testing = adData[-trainIndex,]
+
+# Problem 2.
+```{r}
+library(AppliedPredictiveModeling)
+data(concrete)
+library(caret)
+set.seed(975)
+inTrain = createDataPartition(mixtures$CompressiveStrength, p=3/4)[[1]]
+training = mixtures[inTrain,]
+testing = mixtures[-inTrain,]
+xnames <- colnames(concrete)[1:8]
+featurePlot(x=training[, xnames], y=training$CompressiveStrength, plot="pairs")
+# No relation between the outcome and other variables
+index <- seq_along(1:nrow(training))
+ggplot(data=training, aes(x=index, y=CompressiveStrength)) + geom_point() + 
+  theme_bw()
+# Step-like pattern -> 4 categories
+library(Hmisc)
+cutCompressiveStrength <- cut2(training$CompressiveStrength, g=4)
+summary(cutCompressiveStrength)
+ggplot(data=training, aes(y=index, x=cutCompressiveStrength)) + 
+  geom_boxplot() + geom_jitter(col="blue") + theme_bw()
+```
+# Another way
+library(plyr)
+splitOn <- cut2(training$Age, g=4)
+splitOn <- mapvalues(splitOn, 
+                     from=levels(factor(splitOn)), 
+                     to=c("red", "blue", "yellow", "green"))
+plot(training$CompressiveStrength, col=splitOn)
+# There is a step-like pattern in the plot of outcome versus index 
+# in the training set that isn't explained by any of the predictor 
+# variables so there may be a variable missing.
+
+# Problem 3.
+```{3}
+library(AppliedPredictiveModeling)
+data(concrete)
+library(caret)
+set.seed(975)
+inTrain = createDataPartition(mixtures$CompressiveStrength, p=3/4)[[1]]
+training = mixtures[ inTrain,]
+testing = mixtures[-inTrain,]
+qplot(Superplasticizer, data=training) # OR
+ggplot(data=training, aes(x=Superplasticizer)) + geom_histogram() + theme_bw()
+```
+There are a large number of values that are the same and even if you took the log(SuperPlasticizer + 1) they would still all be 
+identical so the distribution would not be symmetric. There are values of zero so when you take the log() transform 
+those values will be -Inf.
+
+# Problem 4.
+```{r}
+library(caret)
+library(AppliedPredictiveModeling)
+set.seed(3433)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis,predictors)
+inTrain = createDataPartition(adData$diagnosis, p=3/4)[[1]]
+training = adData[ inTrain,]
+testing = adData[-inTrain,]
+ss <- training[,grep('^IL', x = names(training) )]
+preProc <- preProcess(ss, method='pca', thresh=0.9, 
+                      outcome=training$diagnosis)
+preProc$rotation # 9
+```
+
+# Problem 5.
+```{r}
+library(caret)
+library(AppliedPredictiveModeling)
+set.seed(3433)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis,predictors)
+inTrain = createDataPartition(adData$diagnosis, p=3/4)[[1]]
+training = adData[ inTrain,]
+testing = adData[-inTrain,]
+
+set.seed(3433)
+IL <- grep("^IL", colnames(training), value=TRUE)
+ILpredictors <- predictors[, IL]
+df <- data.frame(diagnosis, ILpredictors)
+inTrain <- createDataPartition(df$diagnosis, p=3/4)[[1]]
+training <- df[inTrain, ]
+testing <- df[-inTrain, ]
+modelFit <- train(diagnosis ~ ., method="glm", data=training)
+predictions <- predict(modelFit, newdata=testing)
+C1 <- confusionMatrix(predictions, testing$diagnosis)
+print(C1)
+acc1 <- C1$overall[1]
+acc1 # Non-PCA Accuracy: 0.65 
+
+modelFit <- train(training$diagnosis ~ ., 
+                  method="glm", 
+                  preProcess="pca", 
+                  data=training, 
+                  trControl=trainControl(preProcOptions=list(thresh=0.8)))
+C2 <- confusionMatrix(testing$diagnosis, predict(modelFit, testing))
+print(C2)
+acc2 <- C2$overall[1]
+acc2 # PCA Accuracy: 0.72
+
+```
+## Quiz 3
+
+Resourses:
+
+https://rstudio-pubs-static.s3.amazonaws.com/86226_2f11ea012e23432aa1c3980e3f4f909b.html
+https://rpubs.com/cheyu/pmlQ3
+
+# Problem 1.
+```{r}
+library(AppliedPredictiveModeling)
+data(segmentationOriginal)
+library(caret)
+data <- segmentationOriginal
+set.seed(125)
+inTrain <- data$Case == "Train"
+trainData <- data[inTrain, ]
+testData <- data[!inTrain, ]
+cartModel <- train(Class ~ ., data=trainData, method="rpart")
+cartModel$finalModel
+# n= 1009 
+# node), split, n, loss, yval, (yprob)
+# * denotes terminal node
+# 1) root 1009 373 PS (0.63032706 0.36967294)  
+#   2) TotalIntenCh2< 45323.5 454  34 PS (0.92511013 0.07488987) *
+#   3) TotalIntenCh2>=45323.5 555 216 WS (0.38918919 0.61081081)  
+#     6) FiberWidthCh1< 9.673245 154  47 PS (0.69480519 0.30519481) *
+#     7) FiberWidthCh1>=9.673245 401 109 WS (0.27182045 0.72817955) *
+plot(cartModel$finalModel, uniform=T)
+text(cartModel$finalModel, cex=0.8)
+# a. TotalIntench2 = 23,000; FiberWidthCh1 = 10; PerimStatusCh1=2 => PS
+# b. TotalIntench2 = 50,000; FiberWidthCh1 = 10;VarIntenCh4 = 100 => WS
+# c. TotalIntench2 = 57,000; FiberWidthCh1 = 8;VarIntenCh4 = 100 => PS
+# d. FiberWidthCh1 = 8;VarIntenCh4 = 100; PerimStatusCh1=2 => Not possible to predict 
+```
+
+# Problem 2.
+If K is small in a K-fold cross validation is the bias in the # estimate of out-of-sample (test set) accuracy smaller or bigger?
+# A: bias is larger
+# If K is small is the variance in the estimate of out-of-sample
+# (test set) accuracy smaller or bigger. 
+# A: variance is smaller
+# Is K large or small in leave one out cross validation?
+# A: Under leave one out cross validation K is equal to the sample 
+# size.
+
+# Problem 3.
+```{r}
+library(pgmm)
+data(olive)
+dim(olive)
+head(olive)
+olive <- olive[,-1]
+treeModel <- train(Area ~ ., data=olive, method="rpart2")
+treeModel
+newdata <- as.data.frame(t(colMeans(olive)))
+predict(treeModel, newdata) # 2.875
+# 2.875. It is strange because Area should be a qualitative 
+# variable - but tree is reporting the average value of Area as 
+# a numeric variable in the leaf predicted for newdata
+```
+
+# Problem 4.
+```{r}
+library(ElemStatLearn)
+data(SAheart)
+set.seed(8484)
+train <- sample(1:dim(SAheart)[1],size=dim(SAheart)[1]/2,replace=F)
+trainSA <- SAheart[train,]
+testSA <- SAheart[-train,]
+set.seed(13234)
+logitModel <- train(chd ~ age + alcohol + obesity + tobacco + 
+                      typea + ldl, data=trainSA, method="glm", 
+                    family="binomial")
+logitModel
+missClass <- function(values,prediction){sum(((prediction > 0.5)*1) != values)/length(values)}
+predictTrain <- predict(logitModel, trainSA)
+predictTest <- predict(logitModel, testSA)
+# Training Set Misclassification rate
+missClass(trainSA$chd, predictTrain) # 0.2727273
+# Test Set Misclassification rate
+missClass(testSA$chd, predictTest) # 0.3116883
+```
+
+# Problem 5.
+```{r}
+library(ElemStatLearn)
+data(vowel.train)
+data(vowel.test)
+head(vowel.train)
+head(vowel.test)
+dim(vowel.train) # 528  11
+dim(vowel.test) # 462  11
+vowel.train$y <- as.factor(vowel.train$y)
+vowel.test$y <- as.factor(vowel.test$y)
+set.seed(33833)
+modelRf <- randomForest(y ~ ., data = vowel.train, importance = FALSE)
+order(varImp(modelRf), decreasing=T)
+# The order of the variables is:
+#  x.2, x.1, x.5, x.6, x.8, x.4, x.9, x.3, x.7,x.10
+```
+
+## Quiz 4.
+
+Resources:
+
+https://rpubs.com/cheyu/pmlQ4
+
+
+# Problem 1.
+```{r}
+library(ElemStatLearn)
+library(caret)
+data(vowel.train)
+data(vowel.test) 
+vowel.train$y <- as.factor(vowel.train$y)
+vowel.test$y <- as.factor(vowel.test$y)
+set.seed(33833)
+# fit rf predictor relating the factor variable y
+fitRf <- train(y ~ ., data=vowel.train, method="rf")
+fitGBM <- train(y ~ ., data=vowel.train, method="gbm")
+predRf <- predict(fitRf, vowel.test)
+predGBM <- predict(fitGBM, vowel.test)
+# RF Accuracy: 0.6060606
+confusionMatrix(predRf, vowel.test$y)$overall[1]
+# GBM Accuracy: 0.530303
+confusionMatrix(predGBM, vowel.test$y)$overall[1]
+pred <- data.frame(predRf, predGBM, y=vowel.test$y, agree=predRf == predGBM)
+head(pred)
+accuracy <- sum(predRf[pred$agree] == pred$y[pred$agree]) / sum(pred$agree)
+accuracy # Agreement Accuracy: 0.6569579
+```
+# Problem 2.
+```{r}
+library(caret)
+library(gbm)
+set.seed(3433)
+library(AppliedPredictiveModeling)
+data(AlzheimerDisease)
+adData <- data.frame(diagnosis, predictors)
+inTrain <- createDataPartition(adData$diagnosis, p=3/4)[[1]]
+training <- adData[inTrain, ]
+testing <- adData[-inTrain, ]
+dim(adData) # 333 131
+# head(adData)
+set.seed(62433)
+fitRf <- train(diagnosis ~ ., data=training, method="rf")
+fitGBM <- train(diagnosis ~ ., data=training, method="gbm")
+fitLDA <- train(diagnosis ~ ., data=training, method="lda")
+predRf <- predict(fitRf, testing)
+predGBM <- predict(fitGBM, testing)
+predLDA <- predict(fitLDA, testing)
+pred <- data.frame(predRf, predGBM, predLDA, diagnosis=testing$diagnosis)
+# Stack the predictions together using random forests ("rf")
+fit <- train(diagnosis ~., data=pred, method="rf")
+predFit <- predict(fit, testing)
+c1 <- confusionMatrix(predRf, testing$diagnosis)$overall[1]
+c2 <- confusionMatrix(predGBM, testing$diagnosis)$overall[1]
+c3 <- confusionMatrix(predLDA, testing$diagnosis)$overall[1]
+c4 <- confusionMatrix(predFit, testing$diagnosis)$overall[1]
+print(paste(c1, c2, c3, c4)) 
+# Stacked Accuracy: 0.79 is better than random forests and lda 
+# and the same as boosting.
+```
+# Problem 3.
+```{r}
+set.seed(3523)
+library(AppliedPredictiveModeling)
+library(elasticnet)
+data(concrete)
+inTrain <- createDataPartition(concrete$CompressiveStrength, 
+                              p=3/4)[[1]]
+training <- concrete[inTrain, ]
+testing <- concrete[-inTrain, ]
+set.seed(233)
+fit <- train(CompressiveStrength ~ ., data=training, method="lasso")
+fit
+plot.enet(fit$finalModel, xvar="penalty", use.color=T) # Cement
+```
+# Problem 4.
+```{r}
+library(lubridate)  # For year() function below
+library(forecast)
+dat <- read.csv("./data/gaData.csv")
+training <- dat[year(dat$date) < 2012, ]
+testing <- dat[(year(dat$date)) > 2011, ]
+tstrain <- ts(training$visitsTumblr)
+fit <- bats(tstrain)
+fit
+pred <- forecast(fit, level=95, h=dim(testing)[1])
+names(data.frame(pred))
+predComb <- cbind(testing, data.frame(pred))
+names(testing)
+names(predComb)
+predComb$in95 <- (predComb$Lo.95 < predComb$visitsTumblr) & 
+                    (predComb$visitsTumblr < predComb$Hi.95)
+# How many of the testing points is the true value within the 
+# 95% prediction interval bounds?
+prop.table(table(predComb$in95))[2] # 0.9617021
+```
+# Problem 5.
+```{r}
+set.seed(3523)
+library(AppliedPredictiveModeling)
+library(e1071)
+data(concrete)
+inTrain <- createDataPartition(concrete$CompressiveStrength, p=3/4)[[1]]
+training <- concrete[inTrain, ]
+testing <- concrete[-inTrain, ]
+set.seed(325)
+fit <- svm(CompressiveStrength ~., data=training)
+# OR another way
+# fit <- train(CompressiveStrength ~. data=training, method="svmRadial")
+pred <- predict(fit, testing)
+acc <- accuracy(pred, testing$CompressiveStrength)
+acc
+acc[2] # RMSE 6.715009
+```

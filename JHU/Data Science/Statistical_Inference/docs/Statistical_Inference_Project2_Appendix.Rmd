@@ -1,0 +1,62 @@
+---
+title: 'Inferential Analysis on ToothGrowth Data - Appendix'
+author: "Cliff Weaver"
+date: "Sept 22, 2015"
+output: pdf_document
+geometry: margin=.5in
+---
+
+Below is the supporting code junks for Statistical Inference Project 2.
+
+Histograms to evaluate skew:
+```{r skew1, , eval=FALSE, fig.height=3}
+suppOJ <- filter(ToothGrowth, supp=="OJ")
+suppVC <- filter(ToothGrowth, supp=="VC")
+par(mfcol=c(1,3))
+hist(ToothGrowth$len, col="lightblue", main = "OJ & VC", xlab="Tooth Length")
+hist(suppOJ$len, col="lightgreen", main = "Orange Juice (OJ)", xlab="Tooth Length")
+hist(suppVC$len, col="pink", main = "Ascorbic Acid (VC)", xlab="Tooth Length")
+```
+
+Below a box plot of the data is presented for analysis:
+```{r, boxPlot1, eval=FALSE, warning=FALSE, fig.height=4}
+library(ggplot2)
+ggplot(ToothGrowth, aes(x=factor(dose), y=len, fill=supp)) + geom_boxplot() + scale_color_hue(1-10, c=10) + theme(legend.position="top",   legend.title=element_blank(),legend.background = element_rect(fill="gray90", size=.5, linetype="dotted" )) + 
+     labs(x="Dose", y="Tooth Length") 
+```
+
+Hypothesis Test 1
+```{r, tTest1, eval=FALSE}
+dose05VC <- filter(ToothGrowth, dose==0.5, supp=="VC")
+dose05OJ <- filter(ToothGrowth, dose==0.5, supp=="OJ")
+
+dose1VC <- filter(ToothGrowth, dose==1.0, supp=="VC")
+dose1OJ <- filter(ToothGrowth, dose==1.0, supp=="OJ")
+
+dose2VC <- filter(ToothGrowth, dose==2.0, supp=="VC")
+dose2OJ <- filter(ToothGrowth, dose==2.0, supp=="OJ")
+
+# Perform t test on vc vs oj at 0.5mg dose
+tTest_VC_OJ_05 <- t.test(len ~ supp, data=rbind(dose05VC,dose05OJ), var.equal=FALSE)
+# Perform t test on vc vs oj at 1.0mg dose
+tTest_VC_OJ_10 <- t.test(len ~ supp, data=rbind(dose1VC,dose1OJ), var.equal=FALSE)
+# Perform t test on vc vs oj at 2.0mg dose
+tTest_VC_OJ_20 <- t.test(len ~ supp, data=rbind(dose2VC,dose2OJ), var.equal=FALSE)
+```
+
+Hypothesis Test 2
+
+Null hypothesis (H~0~) is that tooth lengths are the same for each dose level (0.05, 1.0 and 2.0 mg).
+```{r eval=FALSE, scipen=100}
+# Perform t test on 0.5mg vs 1.0mg, within each supplement
+tTest_VC_05_10 <- t.test(len ~ dose, data=rbind(dose05VC,dose1VC), var.equal=TRUE)
+tTest_OJ_05_10 <- t.test(len ~ dose, data=rbind(dose05OJ,dose1OJ), var.equal=TRUE)
+
+# Perform t test on 1.0mg vs 2.0mg, within each supplement
+tTest_VC_10_20 <- t.test(len ~ dose, data=rbind(dose1VC,dose2VC), var.equal=TRUE)
+tTest_OJ_10_20 <- t.test(len ~ dose, data=rbind(dose1OJ,dose2OJ), var.equal=TRUE)
+
+# Perform t test on 0.5mg vs 2.0mg, within each supplement
+tTest_VC_05_20 <- t.test(len ~ dose, data=rbind(dose05VC,dose2VC), var.equal=TRUE)
+tTest_OJ_05_20 <- t.test(len ~ dose, data=rbind(dose05OJ,dose2OJ), var.equal=TRUE)
+```

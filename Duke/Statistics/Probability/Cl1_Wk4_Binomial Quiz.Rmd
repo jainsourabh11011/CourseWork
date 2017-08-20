@@ -1,0 +1,195 @@
+---
+title: "Week 4 Binomial Quiz"
+output: statsr:::statswithr_lab
+---
+
+<div id="instructions">
+Since there was no lab for the binomial distribution part of the course, I prepared this.  The questions from the quiz will serve as a good learning tool.
+</div>
+
+1.  Suppose that scores on a national entrance exam are normally distributed with mean 1000 and standard deviation 100. Which of the following is **false**?
+<ol>
+<li> A score greater than 1300 is more unusual than a score less than 800.</li>
+<li> A normal probability plot of national entrance exam scores of a random sample of 1,000 people should show a straight line.</li>
+<li> Roughly 68% of people have scores between 900 and 1100.</li>
+<li> We would expect the number of people scoring above 1200 to be more than the number of people scoring below 900. </li>
+</ol>
+
+```{r answer1}
+#FALSE:  We would expect the number of people scoring above 1200 to be more than the number of people scoring below 900.
+```
+
+2. The National Vaccine Information Center estimates that 90% of Americans have had the disease chickenpox by the time they reach adulthood. What is the probability that exactly 92 out of 100 randomly sampled American adults had chickenpox during childhood?
+<ol>
+<li> 0.10 </li>
+<li> 0.02 </li>
+<li> 0.07 </li>
+<li> 0.11 </li>
+</ol>
+
+```{r answer2}
+dbinom(92, 100, .9)
+```
+
+3. Your roommate loves to eat Chinese food for dinner. He estimates that on any given night, there’s a 30% chance he’ll choose to eat Chinese food. Although he loves Chinese food, he doesn’t like to eat it too much in a short period of time, so on most weeks he eats several different kinds of foods for dinner. Suppose you wanted to calculate the probability that, over the next 7 days, you friend eats Chinese food at least 3 times. Which of the following is the most accurate statement about calculating this probability?
+<ol>
+<li> Because we know n = 7, k = 3, and p = 0.30, we can use the binomial distribution to calculate the desired probability. </li>
+<li> Because we know n = 3, k = 7, and p = 0.30, we can use the binomial distribution to calculate the desired probability. </li>
+<li> Because “success” or “failure” have no real meaning in the context of this problem, we cannot use the binomial distribution to calculate the desired probability. </li>
+<li> Because he doesn’t like to eat Chinese food too much in a short period of time, p is not really the same for each trial and so we cannot use the binomial distribution to calculate the desired probability. </li>
+<li> Because we do not know the probabilities of your roommate eating any other types of foods, we cannot use the binomial distribution to calculate the desired probability.</li>
+</ol>
+
+<div id="exercise">
+**Got it wrong**: 
+This question refers to the following learning objective: Determine if a random variable is binomial using the four conditions.
+- The trials are independent.
+- The number of trials, n, is fixed.
+- Each trial outcome can be classified as a success or failure. 
+- The probability of a success, p, is the same for each trial.
+
+Because he doesn’t like to eat Chinese food too much in a short period of time, p is not really the same for each trial and so we cannot use the binomial distribution to calculate the desired probability.
+</div>
+
+4. Suppose you observe a data point x = 12 and it is known that this data point came from a normal distribution with mean 5 and standard deviation 2. Which of the following statements is true regarding the observation of x = 12?
+<ol>
+<li> The observation would not be considered unusual, because it comes from a normal distribution. </li>
+<li> The observation would be considered unusual because it is farther than three standard deviations from the mean. </li>
+<li> The observation would be considered unusual because x = 12 is over twice as large as the mean of the distribution. </li>
+<li> The observation would not be considered unusual, because we know exactly which normal distribution it comes from. </li>
+<li> The observation would not be considered unusual because it is only about three standard deviations from the mean. </li>
+</ol>
+
+```{r answer4}
+# The observation would be considered unusual because it is farther than three standard deviations from the mean. 
+```
+
+5. Which of the following is ##true##? Hint: It might be useful to sketch the distributions.
+<ol>
+<li> The Z score for the median is approximately 0 if the distribution is bimodal and symmetric. </li>
+<li> The Z score for the median is undefined if the distribution is bimodal. </li>
+<li> The Z score for the median will usually be 0 if the distribution is unimodal and right- skewed.</li>
+<li> The Z score for the mean is undefined if the distribution is bimodal and skewed.</li>
+</ol>
+
+<div id="exercise">
+This question refers to the following learning objective: Depending on the shape of the distribution determine whether the median would have a negative, positive, or 0 Z score keeping in mind that the mean always has a Z score of 0.
+
+Note the Z score is always defined, regardless of the shape and skew of a distribution. 
+</div>
+
+```{r answer5}
+#Since this is wrong - The Z score for the mean is undefined if the distribution is bimodal and skewed.
+#Then maybe - The Z score for the median is approximately 0 if the distribution is bimodal and symmetric.
+```
+
+6. More than three-quarters of the nation’s colleges and universities now offer online classes, and about 23% of college graduates have taken a course online. 39% of those who have taken a course online believe that online courses provide the same educational value as one taken in person, a view shared by only 27% of those who have not taken an online course. At a coffee shop you overhear a recent college graduate discussing that she doesn’t believe that online courses provide the same educational value as one taken in person. What’s the probability that she has taken an online course before?
+<ol>
+<li>0.1997</li>
+<li>0.2079</li>
+<li>0.1403</li>
+<li>0.3014</li>
+</ol>
+
+<div id="exercise">
+This question refers to the following learning objective: Distinguish between marginal and conditional probabilities. Construct tree diagrams to calculate conditional probabilities and probabilities of intersection of non-independent events using Bayes’ theorem: P(A|B) = P(A and B) / P(B)
+
+Let T be the event one has taken an online class before (with T¯¯¯ having not taken one), and let S be the event that one believes the experience provides the same educational value as in-person courses (with S¯¯ being the complement). One way to solve this problem is first write down the known information: P(T) = 0.23, P(S|T) = 0.39, P(S|T¯¯¯) = 0.27. Then P (S¯¯|T) = 1 - 0.39 = 0.61. Now we want to calculate P (T |S¯¯) = P(S¯|T)⋅P(T)P(S¯). The terms in the numerator have already P ( S ̄ ) been calculated. We need the denominator which we can write as P (S ̄) = 1 − P (S) where by the law of total probability P (S) = P (S|T )P (T ) + P (S|T ̄)P (T ̄). This gives P (S ̄) ≈ 0.7051, so finally the quantity we wanted was P (T |S ̄) ≈ $$\frac{.61 \cdot .23}{.7051}$$ ≈ 0.1997. Your answer may vary slightly due to rounding.
+
+</div>
+
+
+7. One strange phenomenon that sometimes occurs at U.S. airport security gates is that an otherwise law-abiding passenger is caught with a gun in his/her carry-on bag. Usually the passenger claims he/she forgot to remove the handgun from a rarely-used bag before packing it for airline travel. It’s estimated that every day 3,000,000 gun owners fly on domestic U.S. flights. Suppose the probability a gun owner will mistakenly take a gun to the airport is 0.00001. What is the probability that tomorrow more than 35 domestic passengers will accidentally get caught with a gun at the airport? Choose the closest answer.
+<ol>
+<li>0.91</li>
+<li>0.02</li>
+<li>0.82</li>
+<li>0.18</li>
+<li>0.28</li>
+</ol>
+
+```{r answer7}
+Samplemean = 3000000* .00001
+1 - pnorm(35, mean=Samplemean, 5)
+#Guessing 0.18
+```
+<div id="exercise">
+This question refers to the following learning objective: When number of trials is sufficiently large, use normal approximation to calculate binomial probabilities, and explain why this approach works.
+
+This calculation would involve the sum of many binomial probabilities, so after checking conditions for the normal approximation to the binomial, (μ=np=3,000,000 × 0.00001 = 30 > 10 and n(1 - p) = 2,999,970 >10) and calculating σ=np(1−p)−−−−−−−−√ = 5.48, we let G denote the number of domestic passengers who get caught with a gun on a particular day. Then calculate
+
+P(G>35)=P((G−30)/5.48)
+
+= P((35 - 30)/5.48)
+
+≈ P(Z > .91)
+
+≈ 0.18
+</div>
+
+8.  Suppose IQ scores are normally distributed with mean 100 and standard deviation 10. Which of the following is **false**?
+<ol>
+<li> Roughly 68% of people have IQ scores between 90 and 110.</li>
+<li> An IQ score of 80 is more unusual than an IQ score of 120.</li>
+<li> A normal probability plot of IQ scores of a random sample of 1,000 people should show a straight line.</li>
+<li> An IQ score greater than 130 is highly unlikely, but not impossible</li>
+</ol?
+
+```{r answer8}
+#An IQ score of 80 is more unusual than an IQ score of 120.
+```
+
+9. While it is often assumed that the probabilities of having a boy or a girl are the same, the actual probability of having a boy is slightly higher at 0.51. Suppose a couple plans to have 3 children. What is the probability that exactly 2 of them will be boys?
+<ol>
+<li>**0.38**</li>
+<li>0.48</li>
+<li>0.58</li>
+<li>0.68</li>
+<li>0.78</li>
+
+```{r answer9}
+dbinom(2, 3, .51)
+```
+
+<div id="exercise">
+This question refers to the following learning objective: Calculate the probability of a given number of successes in a given number of trials using the binomial distribution.
+
+If we define a “success” as having a boy (the probability of which is given as 0.51) then we use the binomial distribution with n = 3, k = 2, and p = 0.51.
+</div>
+
+10. Your friend is about to begin an introductory chemistry course at his university. The course has collected data from students on their study habits for many years, and the professor reports that study times (in hours) for the final exam closely follow a normal distribution with mean 24 and standard deviation 4. What percentage of students study 34 hours or more?
+<ol>
+<li>**Less than 2.5%**</li>
+<li>Between 30% and 35%</li>
+<li>Between 2.5% and 5%</li>
+<li>Between 15% and 20%</li>
+<li>Between 5% and 10%</li>
+</ol>
+
+```{r answer 10}
+1 - pnorm(34, 24, 4)
+```
+
+<div id="exercise">
+This question refers to the following learning objective: Assess whether or not a distribution is nearly normal using the 68-95-99.7% rule or graphical methods such as a normal probability plot.
+
+34 hours corresponds to slightly farther than 2 standard deviations from the mean of the normal distribution. Therefore, more than 95% of the data will be within that many standard deviations of the mean. It follows that less than 2.5% of the data will be more extreme than that on the higher end of the curve.
+</div>
+
+11. At any given time about 5.5% of women (age 15-45) are pregnant. A home pregnancy test is accurate 99% of the time if the woman taking the test is actually pregnant and 99.5% accurate if the woman is not pregnant. If the test yields a positive result, what is the posterior probability of the hypothesis that the woman is pregnant?
+<ol>
+<li>0.995</li>
+<li>0.08</li>
+<li>0.99</li>
+<li>0.92</li>
+</ol>
+
+```{r answer11}
+#No idea.  Guessing .92
+```
+
+<div id="exercise">
+This question refers to the following learning objective: Distinguish between marginal and conditional probabilities. Construct tree diagrams to calculate conditional probabilities and probabilities of intersection of non-independent events using Bayes’ theorem: P(A|B) = P(A and B) / P(B)
+
+Let P and N denote the events “is pregnant” and “is not pregnant” respectively. Let “+” and “−” denote a positive and negative test result. We are given that P(P) = 0.055, P (+|P ) = 0.99, P (−|N ) = 0.995. Now let’s write down the desired quantity, use Bayes’ Theorem on it, and see what we have. We are asked to calculate P(P|+), which we write as P(+|P)P(P)P(+|P)P(P)+P(+|N)P(N). We weren’t given P(N) or P(+|N), but we can calculate them using given information. Specifically P (N ) = 1 − P (P ) = 0.945 and P(+|N) = 1 − P(−|N) = 0.005. Then plug in to Bayes’ Theorem to find P(P|+) = 0.99(0.055)0.99(0.055)+0.005(0.945) = 0.92. Your answer may vary slightly due to rounding.
+</div>

@@ -1,0 +1,91 @@
+---
+title: "Using Decision Trees"
+output: html_document
+---
+
+See http://datascienceplus.com/using-decision-trees-to-predict-infant-birth-weights/
+
+##What is a decision tree?
+
+A decision tree is an algorithm that builds a flowchart like graph to illustrate the possible outcomes of a decision. To build the tree, the algorithm first finds the variable that does the best job of separating the data into two groups. Then, it repeats the above step with the other variables. This results in a tree graph, where each split represents a decision. The algorithm chooses the splits such that the maximum number of observations are classified correctly. The biggest advantage of a decision tree is that it is really intuitive and can be understood even by people with no experience in the field.
+
+For example, a classification tree showing the survival of passengers of the Titanic is as follows (source: Wikipedia):
+![](../figures/titanic.png)
+
+The numbers under the node represent the probability of survival, and the percentage of observations that fall into that category. The first node on the right shows that 73% of the females survived, and females represented 36% of the total observations in the dataset.
+
+##Exploring the data
+
+We will need the MASS and rpart libraries for this. Let’s load up the data, and look at it.
+```{r message=FALSE, warning=FALSE}
+library(MASS)
+library(rpart)
+head(birthwt)
+```
+
+From the help file,
+- low – indicator of whether the birth weight is less than 2.5kg
+- age – mother’s age in year
+- lwt – mother’s weight in pounds at last menstrual period
+- race – mother’s race (1 = white, 2 = black, white = other)
+- smoke – smoking status during pregnancy
+- ptl – number of previous premature labours
+- ht – history of hypertension
+- ui – presence of uterine irritability
+- ftv – number of physician visits during the first trimester
+- bwt – birth weight in grams
+
+Let’s look at the distribution of infant weights:
+```{r message=FALSE, warning=FALSE}
+hist(birthwt$bwt)
+```
+
+Most of the infants weigh between 2kg and 4kg.
+
+Now, let us look at the number of infants born with low weight.
+```{r message=FALSE, warning=FALSE}
+table(birthwt$low)
+```
+
+This means that there are 130 infants weighing more than 2.5kg and 59 infants weighing less than 2.5kg. If we just guessed the most common occurrence (> 2.5kg), our accuracy would be 130 / (130 + 59) = 68.78%. Let’s see if we can improve upon this by building a prediction model.
+
+##Building the model
+
+In the dataset, all the variables are stored as numeric. Before we build our model, we need to convert the categorical variables to factor.
+```{r message=FALSE, warning=FALSE}
+cols <- c('low', 'race', 'smoke', 'ht', 'ui')
+birthwt[cols] <- lapply(birthwt[cols], as.factor)
+```
+
+Next, let us split our dataset so that we have a training set and a testing set.
+```{r message=FALSE, warning=FALSE}
+set.seed(1)
+train <- sample(1:nrow(birthwt), 0.75 * nrow(birthwt))
+```
+
+Now, let us build the model. We will use the rpart function for this.
+```{r message=FALSE, warning=FALSE}
+birthwtTree <- rpart(low ~ . - bwt, data = birthwt[train, ], method = 'class')
+```
+
+Since low = bwt <= 2.5, we exclude bwt from the model, and since it is a classification task, we specify method = 'class'. Let’s take a look at the tree.
+```{r message=FALSE, warning=FALSE}
+plot(birthwtTree)
+text(birthwtTree, pretty = 0)
+```
+
+This means that if the mother has had one or more premature labours previously, and her weight at the last menstrual period was equal to or lesser than 131.5 pounds, then the infant is likely to be born with low weight. The other nodes can be interpreted similarly.
+
+We can get a more detailed, textual summary of the tree as follows:
+```{r message=FALSE, warning=FALSE}
+summary(birthwtTree)
+```
+
+Since the summary is rather detailed and long, I will not paste it here. It contains more information about the number of observations at each node, and also their probabilities.
+
+Let us now see how the model performs on the test set.
+```{r message=FALSE, warning=FALSE}
+birthwtPred <- predict(birthwtTree, birthwt[-train, ], type = 'class')
+table(birthwtPred, birthwt[-train, ]$low)
+```
+Hence, the accuracy is (31 + 5) / (31 + 5 + 2 + 10) = 75%! Not bad, huh? The accuracy can further be improved by techniques such as bagging and random forests. If you are more interested in learning about these, and the mathematics behind the decision tree, I highly suggest referring to Introduction to Statistical Learning.

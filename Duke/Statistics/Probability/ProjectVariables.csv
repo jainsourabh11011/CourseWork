@@ -1,0 +1,170 @@
+No,countNAs,percentNA,cat,,,,
+37,2287,0.0046505,addepev2,Ever Told You Had A Depressive Disorder,,,addepev2 - Ever Told You Had A Depressive Disorder
+62,19642,0.0399412,alcday5,Days In Past 30 Had Alcoholic Beverage,,,alcday5 - Days In Past 30 Had Alcoholic Beverage
+32,1558,0.0031681,asthma3,Ever Told Had Asthma,,,asthma3 - Ever Told Had Asthma
+132,37493,0.0762405,beanday_,Computed Bean Intake In Times Per Day,,,beanday_ - Computed Bean Intake In Times Per Day
+55,11077,0.0225246,blind,Blind Or Difficulty Seeing,,,blind - Blind Or Difficulty Seeing
+26,9008,0.0183174,bloodcho,Ever Had Blood Cholesterol Checked,,,bloodcho - Ever Had Blood Cholesterol Checked
+25,1418,0.0028834,bphigh4,Ever Told Blood Pressure High,,,bphigh4 - Ever Told Blood Pressure High
+13,135149,0.2748199,cellfon3,cellfon3,,,cellfon3 - cellfon3
+35,2723,0.0055371,chccopd1,"(Ever Told) You Have (Copd) Chronic Obstructive Pulmonary Disease, Emphysema Or",,,"chccopd1 - (Ever Told) You Have (Copd) Chronic Obstructive Pulmonary Disease, Emphysema Or"
+38,1719,0.0034955,chckidny,(Ever Told) You Have Kidney Disease?,,,chckidny - (Ever Told) You Have Kidney Disease?
+34,1147,0.0023324,chcocncr,(Ever Told) You Had Any Other Types Of Cancer?,,,chcocncr - (Ever Told) You Had Any Other Types Of Cancer?
+33,1308,0.0026598,chcscncr,(Ever Told) You Had Skin Cancer?,,,chcscncr - (Ever Told) You Had Skin Cancer?
+23,6303,0.0128169,checkup1,Length Of Time Since Last Routine Checkup,,,checkup1 - Length Of Time Since Last Routine Checkup
+42,2272,0.00462,children,Number Of Children In Household,,,children - Number Of Children In Household
+27,73176,0.1488004,cholchk,How Long Since Cholesterol Checked,,,cholchk - How Long Since Cholesterol Checked
+49,135079,0.2746775,cpdemo1,Do You Have A Cell Phone For Personal Use?,,,cpdemo1 - Do You Have A Cell Phone For Personal Use?
+10,39,0.0000793,ctelenum,Cell number,,,ctelenum - Cell number
+30,4422,0.008992,cvdcrhd4,Ever Diagnosed With Angina Or Coronary Heart Disease,,,cvdcrhd4 - Ever Diagnosed With Angina Or Coronary Heart Disease
+29,2586,0.0052585,cvdinfr4,Ever Diagnosed With Heart Attack,,,cvdinfr4 - Ever Diagnosed With Heart Attack
+31,1466,0.0029811,cvdstrk3,Ever Diagnosed With A Stroke,,,cvdstrk3 - Ever Diagnosed With A Stroke
+56,12988,0.0264106,decide,Difficulty Concentrating Or Remembering,,,decide - Difficulty Concentrating Or Remembering
+79,144719,0.2942801,delaymed,Delayed Getting Medical Care,,,delaymed - Delayed Getting Medical Care
+76,0,0,diabage2,Age When Told Diabetic,,,diabage2 - Age When Told Diabetic
+39,831,0.0016898,diabete3,(Ever Told) You Have Diabetes,,,diabete3 - (Ever Told) You Have Diabetes
+59,13348,0.0271426,diffalon,Difficulty Doing Errands Alone,,,diffalon - Difficulty Doing Errands Alone
+58,12120,0.0246455,diffdres,Difficulty Dressing Or Bathing,,,diffdres - Difficulty Dressing Or Bathing
+57,12762,0.025951,diffwalk,Difficulty Walking Or Climbing Stairs,,,diffwalk - Difficulty Walking Or Climbing Stairs
+7,3,0.0000061,dispcode,Final Disposition,,,dispcode - Final Disposition
+80,0,0,dlyother,Delayed Getting Medical Care Other Response,,,dlyother - Delayed Getting Medical Care Other Response
+77,0,0,doctdiab,Times Seen Health Professional For Diabetes,,,doctdiab - Times Seen Health Professional For Diabetes
+124,19645,0.0399473,drnkany5,Drink Any Alcoholic Beverages In Past 30 Days,,,drnkany5 - Drink Any Alcoholic Beverages In Past 30 Days
+125,19644,0.0399453,drocdy3_,Computed Drink-Occasions-Per-Day,,,drocdy3_ - Computed Drink-Occasions-Per-Day
+43,2273,0.0046221,educa,Education Level,,,educa - Education Level
+44,3384,0.0068812,employ1,Employment Status,,,employ1 - Employment Status
+69,34027,0.0691925,exerany2,Exercise In Past 30 Days,,,exerany2 - Exercise In Past 30 Days
+150,4728,0.0096142,fc60_,Estimated Functional Capacity,,,fc60_ - Estimated Functional Capacity
+72,40452,0.0822575,flushot6,Adult Flu Shot/Spray Past 12 Mos,,,flushot6 - Adult Flu Shot/Spray Past 12 Mos
+2,2,0.0000041,fmonth,File Month,,,fmonth - File Month
+64,33796,0.0687228,fruit1,How Many Times Did You Eat Fruit?,,,fruit1 - How Many Times Did You Eat Fruit?
+63,36206,0.0736234,fruitju1,How Many Times Did You Drink 100 Percent Pure Fruit Juices?,,,fruitju1 - How Many Times Did You Drink 100 Percent Pure Fruit Juices?
+131,33798,0.0687268,frutda1_,Computed Fruit Intake In Times Per Day,,,frutda1_ - Computed Fruit Intake In Times Per Day
+130,36209,0.0736295,ftjuda1_,Computed Fruit Juice Intake In Times Per Day,,,ftjuda1_ - Computed Fruit Juice Intake In Times Per Day
+65,37490,0.0762344,fvbeans,How Many Times Did You Eat Beans Or Lentils?,,,fvbeans - How Many Times Did You Eat Beans Or Lentils?
+66,35155,0.0714862,fvgreen,How Many Times Did You Eat Dark Green Vegetables?,,,fvgreen - How Many Times Did You Eat Dark Green Vegetables?
+67,36561,0.0743453,fvorang,How Many Times Did You Eat Orange-Colored Vegetables?,,,fvorang - How Many Times Did You Eat Orange-Colored Vegetables?
+17,1983,0.0040323,genhlth,General Health,,,genhlth - General Health
+133,35157,0.0714903,grenday_,Computed Dark Green Vegetable Intake In Times Per Day,,,grenday_ - Computed Dark Green Vegetable Intake In Times Per Day
+36,2968,0.0060353,havarth3,Told Have Arthritis,,,havarth3 - Told Have Arthritis
+47,7621,0.015497,height3,Reported Height In Feet And Inches,,,height3 - Reported Height In Feet And Inches
+75,54591,0.1110085,hivtst6,Ever Tested HIV,,,hivtst6 - Ever Tested HIV
+78,0,0,hlthcvrg,Health Insurance Coverage,,,hlthcvrg - Health Insurance Coverage
+20,1902,0.0038676,hlthpln1,Have Any Health Care Coverage,,,hlthpln1 - Have Any Health Care Coverage
+113,9508,0.0193341,htin4,Height in in,,,htin4 - Height in in
+114,7641,0.0155377,htm4,height in m,,,htm4 - height in m
+3,1,0.000002,idate,Interview date,,,idate - Interview date
+5,1,0.000002,iday,Interview Day,,,iday - Interview Day
+4,1,0.000002,imonth,Interview month,,,imonth - Interview month
+45,71424,0.1452377,income2,Income level,,,income2 - Income level
+50,4924,0.0100127,internet,Internet Use In The Past 30 Days?,,,internet - Internet Use In The Past 30 Days?
+169,0,0,is_State,Is the location a US State,,,is_State - Is the location a US State
+6,3,0.0000061,iyear,Interview year,,,iyear - Interview year
+41,3418,0.0069504,marital,Marital Status,,,marital - Marital Status
+149,4727,0.0096122,maxvo2_,Estimated Age-Gender Specific Maximum Oxygen Consumption,,,maxvo2_ - Estimated Age-Gender Specific Maximum Oxygen Consumption
+82,144295,0.2934179,medbills,Currently Have Medical Bills,,,medbills - Currently Have Medical Bills
+22,1219,0.0024788,medcost,Could Not See Dr. Because Of Cost,,,medcost - Could Not See Dr. Because Of Cost
+81,142623,0.290018,medscost,Could Not Get Medicine Due To Cost,,,medscost - Could Not Get Medicine Due To Cost
+19,8626,0.0175406,menthlth,Number Of Days Mental Health Not Good,,,menthlth - Number Of Days Mental Health Not Good
+85,136641,0.2778538,mscode,Metro status code,,,mscode - Metro status code
+14,131649,0.2677028,numadult,Number Of Adults In Household,,,numadult - Number Of Adults In Household
+48,134363,0.2732216,numhhol2,Household Telephones,,,numhhol2 - Household Telephones
+15,131649,0.2677028,nummen,Number Of Adult Men In Household,,,nummen - Number Of Adult Men In Household
+16,131649,0.2677028,numwomen,Number Of Adult Women In Household,,,numwomen - Number Of Adult Women In Household
+134,36562,0.0743473,orngday_,Computed Orange-Colored Vegetable Intake In Times Per Day,,,orngday_ - Computed Orange-Colored Vegetable Intake In Times Per Day
+153,0,0,pa1vigm_,Minutes Of Total Vigorous Physical Activity Per Week,,,pa1vigm_ - Minutes Of Total Vigorous Physical Activity Per Week
+152,34030,0.0691986,pamiss1_,Missing Physical Activity Data,,,pamiss1_ - Missing Physical Activity Data
+21,1799,0.0036582,persdoc2,Multiple Health Care Professionals,,,persdoc2 - Multiple Health Care Professionals
+18,10956,0.0222786,physhlth,Number Of Days Physical Health Not Good,,,physhlth - Number Of Days Physical Health Not Good
+74,84500,0.1718272,pneuvac3,Pneumonia Shot Ever,,,pneuvac3 - Pneumonia Shot Ever
+11,131634,0.2676723,pvtresd1,Private Residence?,,,pvtresd1 - Private Residence?
+53,11327,0.023033,qlactlm2,Activity Limitation Due To Health Problems,,,qlactlm2 - Activity Limitation Due To Health Problems
+84,376,0.0007646,qstlang,Language Identifier,,,qstlang - Language Identifier
+83,9,0.0000183,qstver,Questionnaire Version Identifier,,,qstver - Questionnaire Version Identifier
+51,8446,0.0171746,renthom1,Own Or Rent Home,,,renthom1 - Own Or Rent Home
+71,38933,0.0791686,seatbelt,How Often Use Seatbelts In Car?,,,seatbelt - How Often Use Seatbelts In Car?
+8,2,0.0000041,seqno,Annual Sequence Number,,,seqno - Annual Sequence Number
+52,5,0.0000102,sex,Respondents Sex,,,sex - Respondents Sex
+24,7386,0.0150191,sleptim1,How Much Time Do You Sleep,,,sleptim1 - How Much Time Do You Sleep
+60,14918,0.0303351,smoke100,Smoked At Least 100 Cigarettes,,,smoke100 - Smoked At Least 100 Cigarettes
+12,131640,0.2676845,stateres,Resident Of State,,,stateres - Resident Of State
+70,39817,0.0809662,strength,How Many Times Did You Do Physical Activities Or Exercises To Strengthen Your Mu,,,strength - How Many Times Did You Do Physical Activities Or Exercises To Strengthen Your Mu
+151,39822,0.0809764,strfreq_,Strength Activity Frequency Per Week,,,strfreq_ - Strength Activity Frequency Per Week
+73,83346,0.1694806,tetanus,Received Tetanus Shot Since 2005?,,,tetanus - Received Tetanus Shot Since 2005?
+28,71660,0.1457176,toldhi2,Ever Told Blood Cholesterol High,,,toldhi2 - Ever Told Blood Cholesterol High
+54,10315,0.0209751,useequip,Health Problems Requiring Special Equipment,,,useequip - Health Problems Requiring Special Equipment
+61,14016,0.028501,usenow3,Use Of Smokeless Tobacco Products,,,usenow3 - Use Of Smokeless Tobacco Products
+135,38946,0.0791951,vegeda1_,Computed Vegetable Intake In Times Per Day,,,vegeda1_ - Computed Vegetable Intake In Times Per Day
+68,38945,0.079193,vegetab1,How Many Times Did You Eat Other Vegetables?,,,vegetab1 - How Many Times Did You Eat Other Vegetables?
+40,745,0.0015149,veteran3,Are you a verteran?,,,veteran3 - Are you a verteran?
+46,0,0,weight2,Reported Weight In Pounds,,,weight2 - Reported Weight In Pounds
+115,20683,0.042058,wtkg3,wt kg,,,wtkg3 - wt kg
+112,10,0.0000203,X_age_g,Imputed Age In Six Groups,,,X_age_g - Imputed Age In Six Groups
+111,4730,0.0096183,X_age65yr,Reported Age In Two Age Groups Calculated Variable,,,X_age65yr - Reported Age In Two Age Groups Calculated Variable
+168,9,0.0000183,X_age80,Imputed Age Value Collapsed Above 80,,,X_age80 - Imputed Age Value Collapsed Above 80
+110,4728,0.0096142,X_ageg5yr,Reported Age In Five-Year Age Categories Calculated Variable,,,X_ageg5yr - Reported Age In Five-Year Age Categories Calculated Variable
+167,54593,0.1110126,X_aidtst3,Ever Been Tested For HIV Calculated Variable,,,X_aidtst3 - Ever Been Tested For HIV Calculated Variable
+101,3427,0.0069687,X_asthms1,Computed Asthma Status,,,X_asthms1 - Computed Asthma Status
+116,26725,0.0543442,X_bmi5,Computed Body Mass Index,,,X_bmi5 - Computed Body Mass Index
+117,26725,0.0543442,X_bmi5cat,Computed Body Mass Index Categories,,,X_bmi5cat - Computed Body Mass Index Categories
+100,3428,0.0069707,X_casthm1,Current Asthma Calculated Variable,,,X_casthm1 - Current Asthma Calculated Variable
+119,2278,0.0046322,X_chldcnt,Computed Number Of Children In Household,,,X_chldcnt - Computed Number Of Children In Household
+97,14284,0.0290459,X_cholchk,Cholesterol Checked Calculated Variable,,,X_cholchk - Cholesterol Checked Calculated Variable
+102,2974,0.0060475,X_drdxar1,Respondents Diagnosed With Arthritis,,,X_drdxar1 - Respondents Diagnosed With Arthritis
+127,23879,0.048557,X_drnkdy4,Computed Number Of Drinks Of Alcohol Beverages Per Day,,,X_drnkdy4 - Computed Number Of Drinks Of Alcohol Beverages Per Day
+128,23880,0.048559,X_drnkmo4,Computed Total Number Drinks A Month,,,X_drnkmo4 - Computed Total Number Drinks A Month
+92,9,0.0000183,X_dualuse,Dual Phone Use Categories,,,X_dualuse - Dual Phone Use Categories
+120,2278,0.0046322,X_educag,Computed Level Of Education Completed Categories,,,X_educag - Computed Level Of Education Completed Categories
+144,8,0.0000163,X_frt16,Reported Consuming Fruit >16/Day,,,X_frt16 - Reported Consuming Fruit >16/Day
+142,28701,0.0583623,X_frtlt1,Consume Fruit 1 Or More Times Per Day,,,X_frtlt1 - Consume Fruit 1 Or More Times Per Day
+138,10,0.0000203,X_frtresp,Missing Any Fruit Responses,,,X_frtresp - Missing Any Fruit Responses
+146,8,0.0000163,X_fruitex,Fruit Exclusion From Analyses,,,X_fruitex - Fruit Exclusion From Analyses
+140,28700,0.0583603,X_frutsum,Total Fruits Consumed Per Day,,,X_frutsum - Total Fruits Consumed Per Day
+105,5437,0.0110559,X_hispanc,"Hispanic, Latino/A, Or Spanish Origin Calculated Variable",,,"X_hispanc - Hispanic, Latino/A, Or Spanish Origin Calculated Variable"
+91,131637,0.2676784,X_impnph,Imputed Number Of Phones,,,X_impnph - Imputed Number Of Phones
+90,7,0.0000142,X_imprace,Imputed Race/Ethnicity Value,,,X_imprace - Imputed Race/Ethnicity Value
+121,71426,0.1452418,X_incomg,Computed Income Categories,,,X_incomg - Computed Income Categories
+94,5,0.0000102,X_llcpwt,Final Weight: Land-Line And Cell-Phone Data,,,X_llcpwt - Final Weight: Land-Line And Cell-Phone Data
+93,4,0.0000081,X_llcpwt2,Truncated Design Weight Used In Adult Combined Land Line And Cell Phone Raking,,,X_llcpwt2 - Truncated Design Weight Used In Adult Combined Land Line And Cell Phone Raking
+162,14746,0.0299854,X_lmtact1,Limited Usual Activities,,,X_lmtact1 - Limited Usual Activities
+164,14929,0.0303575,X_lmtscl1,Limited Social Activities,,,X_lmtscl1 - Limited Social Activities
+163,17620,0.0358295,X_lmtwrk1,Limited Work Activities,,,X_lmtwrk1 - Limited Work Activities
+99,1565,0.0031824,X_ltasth1,Lifetime Asthma Calculated Variable,,,X_ltasth1 - Lifetime Asthma Calculated Variable
+136,9,0.0000183,X_misfrtn,The Number Of Missing Fruit Responses,,,X_misfrtn - The Number Of Missing Fruit Responses
+137,7,0.0000142,X_misvegn,The Number Of Missing Vegetable Responses,,,X_misvegn - The Number Of Missing Vegetable Responses
+104,8373,0.0170261,X_mrace1,Calculated Non-Hispanic Race Including Multiracial,,,X_mrace1 - Calculated Non-Hispanic Race Including Multiracial
+156,67568,0.1373967,X_pa150r2,150 Minute Physical Activity Calculated Variable,,,X_pa150r2 - 150 Minute Physical Activity Calculated Variable
+158,76875,0.1563221,X_pa30021,300 Minute Physical Activity 2-Level Calculated Variable,,,X_pa30021 - 300 Minute Physical Activity 2-Level Calculated Variable
+157,76876,0.1563242,X_pa300r2,300 Minute Physical Activity Calculated Variable,,,X_pa300r2 - 300 Minute Physical Activity Calculated Variable
+154,76876,0.1563242,X_pacat1,Physical Activity Categories,,,X_pacat1 - Physical Activity Categories
+155,67569,0.1373988,X_paindx1,Physical Activity Index,,,X_paindx1 - Physical Activity Index
+160,71484,0.1453597,X_parec1,Aerobic And Strengthening Guideline,,,X_parec1 - Aerobic And Strengthening Guideline
+161,71487,0.1453658,X_pastae1,Aerobic And Strengthening (2-Level),,,X_pastae1 - Aerobic And Strengthening (2-Level)
+159,39823,0.0809784,X_pastrng,Muscle Strengthening Recommendation,,,X_pastrng - Muscle Strengthening Recommendation
+103,8374,0.0170282,X_prace1,Computed Preferred Race,,,X_prace1 - Computed Preferred Race
+9,1,0.000002,X_psu,Primary Sampling Unit,,,X_psu - Primary Sampling Unit
+106,8568,0.0174227,X_race,Computed Race-Ethnicity Grouping,,,X_race - Computed Race-Ethnicity Grouping
+109,8568,0.0174227,X_race_g1,Computed Race Groups Used For Internet Prevalence Tables,,,X_race_g1 - Computed Race Groups Used For Internet Prevalence Tables
+107,8568,0.0174227,X_raceg21,Computed Non-Hispanic Whites/All Others Race Categories Race/Ethnic Group Codes,,,X_raceg21 - Computed Non-Hispanic Whites/All Others Race Categories Race/Ethnic Group Codes
+108,8570,0.0174267,X_racegr3,Computed Five Level Race/Ethnicity Category.,,,X_racegr3 - Computed Five Level Race/Ethnicity Category.
+88,4,0.0000081,X_rawrake,Raw Weighting Factor Used In Raking,,,X_rawrake - Raw Weighting Factor Used In Raking
+126,23729,0.0482519,X_rfbing5,Binge Drinking Calculated Variable,,,X_rfbing5 - Binge Drinking Calculated Variable
+118,26727,0.0543482,X_rfbmi5,Overweight Or Obese Calculated Variable,,,X_rfbmi5 - Overweight Or Obese Calculated Variable
+98,71662,0.1457217,X_rfchol,High Cholesterol Calculated Variable,,,X_rfchol - High Cholesterol Calculated Variable
+129,23881,0.048561,X_rfdrhv4,Heavy Alcohol Consumption Calculated Variable,,,X_rfdrhv4 - Heavy Alcohol Consumption Calculated Variable
+95,1987,0.0040405,X_rfhlth,Adults With Good Or Better Health,,,X_rfhlth - Adults With Good Or Better Health
+96,1425,0.0028977,X_rfhype5,High Blood Pressure Calculated Variable,,,X_rfhype5 - High Blood Pressure Calculated Variable
+165,38941,0.0791849,X_rfseat2,Always Or Nearly Always Wear Seat Belts,,,X_rfseat2 - Always Or Nearly Always Wear Seat Belts
+166,38939,0.0791808,X_rfseat3,Always Wear Seat Belts,,,X_rfseat3 - Always Wear Seat Belts
+123,15333,0.031179,X_rfsmok3,Current Smoking Calculated Variable,,,X_rfsmok3 - Current Smoking Calculated Variable
+122,15331,0.031175,X_smoker3,Computed Smoking Status,,,X_smoker3 - Computed Smoking Status
+1,0,0,X_state,State Name,,,X_state - State Name
+87,4,0.0000081,X_strwt,Stratum Weight,,,X_strwt - Stratum Weight
+86,2,0.0000041,X_ststr,Sample Design Stratification Variable,,,X_ststr - Sample Design Stratification Variable
+148,34032,0.0692027,X_totinda,Leisure Time Physical Activity Calculated Variable,,,X_totinda - Leisure Time Physical Activity Calculated Variable
+145,10,0.0000203,X_veg23,Reported Consuming Vegetables >23/Day,,,X_veg23 - Reported Consuming Vegetables >23/Day
+141,30163,0.0613352,X_vegesum,Total Vegetables Consumed Per Day,,,X_vegesum - Total Vegetables Consumed Per Day
+147,10,0.0000203,X_vegetex,Vegetable Exclusion From Analyses,,,X_vegetex - Vegetable Exclusion From Analyses
+143,30162,0.0613332,X_veglt1,Consume Vegetables 1 Or More Times Per Day,,,X_veglt1 - Consume Vegetables 1 Or More Times Per Day
+139,8,0.0000163,X_vegresp,Missing Any Vegetable Responses,,,X_vegresp - Missing Any Vegetable Responses
+89,4,0.0000081,X_wt2rake,Design Weight Used In Raking,,,X_wt2rake - Design Weight Used In Raking

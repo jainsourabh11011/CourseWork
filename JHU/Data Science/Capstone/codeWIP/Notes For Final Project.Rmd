@@ -1,0 +1,114 @@
+---
+title: "Notes For Final Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Things to consider
+
+1. Is tau tokenize faster?
+2. Profiling see http://adv-r.had.co.nz/Profiling.html
+
+
+One challenge that I didn’t anticipate was dealing with big data in R. The text files were about 583MB, and processing even just half of them in memory added up to a few GBs. My laptop has only 4GB of RAM so it was not going to work. As an assignment I did an exploratory data analysis using 15% of the data, which was no problem. But in our quizzes we were supposed to predict the last words of given sentences, and of course, the more data you have, the greater your corpus, the more accurate your prediction would be. Some of my classmates were processing the entire corpus by bash command in Linux or in Jave/C++, but I didn’t know those tools. So I tested the limit to which my computer could handle data processing in a reasonable amount of time, and worked on codes so they were more efficient. This took days and many times of restarting my computer.
+
+The smoothing methods on which I settled were Good-Turing and Kneser-Ney. I combined the smoothing methods with a simple Back-off model. Implementing the algorithms took a while as I wrote the codes for the smoothing from scratch. 
+
+
+shinyapps.io takes 256MB of memory by default, and my data were exceeding that limit. I finally figured out that saving my files as .Rds (R object), rather than loading .csv files, dramatically reduced the files’ size. I also found out how to increase the limit on the size of each file shiny would read (which is 5MB) and the overall memory of the app (the options are medium 512MB, large 1024MB, xlarge 2048MB, xxlarge 4096MB):
+
+ 
+options(shiny.maxRequestSize=30*1024^2)
+ 
+shinyapps::configureApp(&amp;amp;quot;APP NAME&amp;amp;quot;, size=&amp;amp;quot;xlarge&amp;amp;quot;)
+ 
+
+In the mean time, because I was messing around with the codes in server.R, other issues arose and the deployment would either fail, or the app would not work properly. It was agonizing not knowing what exactly the problems were until someone pointed me to checking the shiny log using
+
+ 
+shinyapps::showLogs()
+ 
+-----
+
+http://thie1e.github.io/Capstone%20Blogpost/
+
+Descriptions of the algorithms
+
+n-grams and skip-n-grams
+
+The usual n-gram consists of a sequence of n words, for example "That is" is a bigram. In addition the available models both use skip-5-grams and skip-6-grams which are defined here as a word at position $w{i}$ and a preceding word at position $w{i-n+1}$, so that e.g. a skip-5-gram is one order higher than a normal 4-gram. Skip-n-grams are chosen because including the intermediate words would capture too much of the content / context of the original statement.
+
+Raw counts and Katz-Backoff
+
+This algorithm finds the matching n-gram of the highest possible order among the known n-grams and returns the word with the highest count, i.e. the word that followed the given n-gram most often. This is equivalent to a Maximum Likelihood prediction. If no matching n-gram is found at the highest order the algorithm backs off to n-grams of order $n-1$. If no matches within the ordinary n-grams can be found the algorithm backs off to skip-5-grams and skip-6-grams. If no matching n-grams can be found at all the algorithm predicts the most common tokens (the, to and a).
+
+Kneser-Ney-Smoothing
+
+Kneser-Ney-Smoothing uses not only information contained in one n-gram but also information from lower order n-grams by calculating probabilities recursively, e.g. the formula for 3-grams contains a the Kneser-Ney-probability using the 2-grams.
+
+The main difference is that Kneser-Ney smoothing not only uses frequencies of n-grams but also how likely it is for a given word to appear in different contexts. Some words may be used in a lot of contexts whereas some other words like "Francisco" are used mainly in specific contexts (here, usually after the word "San").
+
+See http://www.foldl.me/2014/kneser-ney-smoothing/ and Jurafsky & Martin (2007), Speech and Language Processing: An introduction to natural language processing, computational linguistics, and speech recognition, pp. 27ff. for more information on Kneser-Ney-Smoothing.
+
+Benchmarking the final prediction algorithm
+
+These are the results of the benchmark which was provided by Jan Hagelauer in the Coursera forums.
+
+As can be seen, Kneser-Ney-smoothing does not beat the simpler backoff model. I checked the calculations and could not find errors but this would be a case for further investigation or development.
+
+
+Raw counts with (Skip-)n-gram-Backoff:
+
+Overall top-3 score:     20.07 %
+Overall top-1 precision: 14.87 %
+Overall top-3 precision: 24.72 %
+Average runtime:         8.70 msec
+Total memory used:       352.02 MB
+
+Dataset details
+ Dataset "blogs" (599 lines, 14587 words)
+  Score: 17.32 %, Top-1 precision: 12.89 %, Top-3 precision: 21.37 %
+ Dataset "quizzes" (20 lines, 323 words)
+  Score: 24.75 %, Top-1 precision: 17.82 %, Top-3 precision: 31.02 %
+ Dataset "tweets" (793 lines, 14011 words)
+  Score: 18.15 %, Top-1 precision: 13.88 %, Top-3 precision: 21.77 %
+
+
+
+Kneser-Ney-Smoothing with Skip-n-gram-Backoff:
+
+Overall top-3 score:     19.40 %
+Overall top-1 precision: 14.45 %
+Overall top-3 precision: 23.98 %
+Average runtime:         8.39 msec
+Total memory used:       352.02 MB
+
+Dataset details
+ Dataset "blogs" (599 lines, 14587 words)
+  Score: 17.43 %, Top-1 precision: 12.81 %, Top-3 precision: 21.58 %
+ Dataset "quizzes" (20 lines, 323 words)
+  Score: 22.88 %, Top-1 precision: 16.83 %, Top-3 precision: 29.04 %
+ Dataset "tweets" (793 lines, 14011 words)
+  Score: 17.89 %, Top-1 precision: 13.71 %, Top-3 precision: 21.31 %
+
+
+The app uses a lot of memory, at least in relation to the prediction apps that have to run on smartphones. Thanks to data.table it was quite fast in comparison to the apps of most other students that posted their benchmark results as it returns a prediction in 8 - 9 msec.
+
+App
+
+Interface and main features
+•Prediction of the next word (top prediction largest)
+•Probable next words: a Markov Chain prediction of the continuation of the sentence given the top prediction
+•Supports German and English
+
+Additional features
+•The user can choose from two prediction algorithms
+•A gauge for "relative confidence" in the top prediction: the square root of the quantile of the count or probability within its respective group of (skip-)n-grams
+
+Prediction algorithms
+•Raw counts and Katz-Backoff: The word with the highest count following the longest possible n-gram
+•Kneser-Ney-smoothing and backoff to skip-n-grams: Recursively calculated probabilities of n-grams and backoff to skip-n-grams
+

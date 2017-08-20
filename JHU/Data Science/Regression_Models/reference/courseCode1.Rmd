@@ -1,0 +1,68 @@
+---
+title: "CourseCode"
+output: html_document
+---
+
+### Example and R Commands
+* `diamond` dataset from `UsingR` package
+ - diamond prices in Singapore Dollars, diamond weight in carats (standard measure of diamond mass, 0.2g)
+* `lm(price ~ I(carat - mean(carat)), data=diamond)` = mean centered linear regression
+ - ***Note**: arithmetic operations must be enclosed in `I()` to work *
+* `predict(fitModel, newdata=data.frame(carat=c(0, 1, 2)))` = returns predicted outcome from the given model (linear in our case) at the provided points within the `newdata` data frame
+ - if `newdata` is unspecified (argument omitted), then `predict` function will return predicted values for all values of the predictor (x variable, carat in this case)
+  + ***Note**: `newdata` has to be a dataframe, and the values you would like to predict (x variable, `carat` in this case) has to be specified, or the system won't know what to do with the provided values *
+* `summary(fitModel)` = prints detailed summary of linear model
+* ***example***
+```{r echo=FALSE, results='hide', message=FALSE}
+library(UsingR)
+```
+
+```{r}
+# standard linear regression for price vs carat
+fit <- lm(price ~ carat, data = diamond)
+# intercept and slope
+coef(fit)
+# mean-centered regression
+fit2 <- lm(price ~ I(carat - mean(carat)), data = diamond)
+# intercept and slope
+coef(fit2)
+# regression with more granular scale (1/10th carat)
+fit3 <- lm(price ~ I(carat * 10), data = diamond)
+# intercept and slope
+coef(fit3)
+# predictions for 3 values
+newx <- c(0.16, 0.27, 0.34)
+# manual calculations
+coef(fit)[1] + coef(fit)[2] * newx
+# prediction using the predict function
+predict(fit, newdata = data.frame(carat = newx))
+```
+
+* **interpretation**
+ - we expect `r round(coef(fit)[2], 2)` (SIN) dollar increase in price for ***every carat increase*** in mass of diamond
+ - or `r round(coef(fit3)[2], 2)` (SIN) dollar increase in price for ***every 1/10 carat*** increase in mass of diamond
+
+* **prediction**
+ - for 0.16, 0.27, and 0.34 carats, we predict the prices to be `r round(as.numeric(predict(fit, newdata = data.frame(carat = newx))),2)` (SIN) dollars
+
+
+```{r, fig.height=4,fig.width=4, fig.align = 'center'}
+# plot the data points
+plot(diamond$carat, diamond$price, xlab = "Mass (carats)", ylab = "Price (SIN $)",
+     bg = "lightblue", col = "black", cex = 1.1, pch = 21,frame = FALSE)
+# plot linear regression line
+abline(fit, lwd = 2)
+# plot predictions for every value of carat (in red)
+points(diamond$carat, predict(fit), pch = 19, col = "red")
+# add guidelines for predictions for 0.16, 0.27, and 0.34
+lines(c(0.16, 0.16, 0.12), c(200, coef(fit)[1] + coef(fit)[2] * 0.16,
+      coef(fit)[1] + coef(fit)[2] * 0.16))
+lines(c(0.27, 0.27, 0.12), c(200, coef(fit)[1] + coef(fit)[2] * 0.27,
+      coef(fit)[1] + coef(fit)[2] * 0.27))
+lines(c(0.34, 0.34, 0.12), c(200, coef(fit)[1] + coef(fit)[2] * 0.34,
+      coef(fit)[1] + coef(fit)[2] * 0.34))
+# add text labels
+text(newx+c(0.03, 0, 0), rep(250, 3), labels = newx, pos = 2)
+```
+
+

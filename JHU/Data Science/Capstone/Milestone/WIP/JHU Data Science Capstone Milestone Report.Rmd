@@ -1,0 +1,437 @@
+---
+title: "JHU Data Science Capstone Milestone Report"
+author: "Cliff Weaver"
+output:
+  html_document:
+    toc: yes
+    code_folding: hide
+subtitle: Data Exploration
+---
+```{r addKinitr, echo=FALSE, message=FALSE}
+library(knitr)
+```
+##Introduction
+
+This document satisfies one of the course requirements for the [Johns Hopkins Data Science Specialization](https://www.coursera.org/specializations/jhu-data-science) hosted by Coursera.  The specialization consists of 9 courses finishing with a 10th requirement - a Capstone Project.  This document is one of the requirements for the Capstone Project.  
+
+The goal of the Capstone Project is to develop an application that will predict the next word after a user starts to type a phrase. To accomplish this, the application must analyze a collection of documents - called a corpus - to identify the structure in the data and how words are put together. It includes cleaning and analyzing text data, sampling and building a predictive text model. The Capstone Project demonstrates many of the skills developed during the Data Science Specialization.  These skills include:
+
+- **Understanding the problem**
+- **Data acquisition and cleaning**
+- **Exploratory analysis**
+- Statistical modeling
+- Predictive modeling
+- Creative exploration
+- Creating a data product
+- Creating a short slide deck pitching your product
+The **bolded tasks** are satisfied by this report.
+
+The specific requirements for this report are:
+
+1. Demonstrate that you've downloaded the data and have successfully loaded it in. 
+2. Create a basic report of summary statistics about the data sets. 
+3. Report any interesting findings that you amassed so far.
+4. Provide feedback on your plans for creating a prediction algorithm and Shiny app. 
+
+This document has been prepared so no advanced knowledge of algorithms or the R Programming language is needed.  (The course assignment specifically states the report written in a way that a non-data scientist manager could appreciate.) However, for those that are technically inclined, all of the code used to prepare this document is provided at the end in the appendix.
+
+##Download the Data
+
+```{r downloadData, eval=FALSE, echo=FALSE}
+#library(downloader)
+# if(!file.exists("../Capstone/data/rawData.zip")){
+#      fileURL <- "http://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+#      download(fileURL, dest = "../Capstone/data/rawData.zip")
+#      unzip("../Capstone/data/rawData.zip", exdir="../Capstone/data")#folders:  data/final/en_US
+# }
+```
+
+```{r fileConRead, echo=FALSE, message=FALSE, warning=FALSE}
+#Would never had known how to do this without this entry in the course discussions
+##https://www.coursera.org/learn/data-science project/discussions/WB6O7eb9EeWhmg4JHc-OZw?sort=createdAtDesc&page=1
+##Unable to use relative path with file
+conBlogs <- file("C:/Users/czwea/Documents/GitHub/Capstone/data/rawData/final/en_US/en_US.blogs.txt", "rb")
+englishBlogs <- readLines(conBlogs)
+close.connection(conBlogs)
+rm(conBlogs)
+
+conNews <- file("C:/Users/czwea/Documents/GitHub/Capstone/data/rawData/final/en_US/en_US.news.txt", "rb")
+englishNews <- readLines(conNews)
+close.connection(conNews)
+rm(conNews)
+
+conTwitter <- file("C:/Users/czwea/Documents/GitHub/Capstone/data/rawData/final/en_US/en_US.twitter.txt", "rb")
+englishTwitter <- readLines(conTwitter, skipNul = TRUE)
+close.connection(conTwitter)#Prevents warnings like In readLines(conTwitter):line 1759032 appears to contain an embedded nul
+rm(conTwitter)
+
+#Create an example file to include in body of report.  Select text that has good examples in it
+#qdap tranformations will be done first so change to data frame
+sampleTwitterDF <- as.data.frame(englishTwitter[1:600])#Used for before and after example
+sampleTwitterDF <- as.character(sampleTwitterDF[c(3:5,20, 64, 72, 76:77, 172, 215, 572),1])
+
+sampleTwitterDF_AFTER <- sampleTwitterDF
+#showConnections()
+#closeAllConnections()
+```
+
+Naturally, the first step is to collect data.  Johns Hopkins has partnered with [Swiftkey](https://swiftkey.com/en) to provide text data sources found [here](http://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip). The data includes blogs, news and twitter files in English, German, Finish, and Russian. This data will be used to build an English Natural Language Processing predictive to predict the next word based on previous words.
+
+The downloaded file is compressed and must be unzipped.  Once expanded, we find that 3 text files are provided for each of the languages noted above.  I have named these files  *englishBlogs*, *englishNews* and *englishTwitter*.  Now that we have captured the raw data, it is time to explore and clean the data using text analytics - sometimes called text mining - methodologies.
+
+##Data Exploration & Summary
+
+###Sample Text File Content
+
+Now that we have downloaded and unzipped the data files, let take a look at the 3 English files and see what kind of content they have.
+
+Here is some random content from the blog file:
+```{r showFilesBlog, echo=FALSE}
+head(sample(englishBlogs, 2))
+
+```
+The News file has content like this:
+```{r showFilesNews, echo=FALSE}
+head(sample(englishNews, 2))
+```
+Lastly, here is some sample content from the Twitter data file:
+```{r showFiles, echo=FALSE}
+head(sample(englishTwitter, 2))
+```
+
+###Summary File Information
+
+Here is some file summary information:
+```{r fileSum, message=FALSE, warning=FALSE, echo=FALSE}
+library(DT)#http://rstudio.github.io/DT/
+#library(stringi)#https://cran.r-project.org/web/packages/stringi/stringi.pdf
+#library(R.utils)
+# library(qdap)#
+# library(scales)
+# 
+# fileSizeBlogs <- round(file.info("C:/Users/czwea/Documents/GitHub/Capstone/data/rawData/final/en_US/en_US.blogs.txt")$size/1024^2, 2)
+# fileSizeNews <- round(file.info("C:/Users/czwea/Documents/GitHub/Capstone/data/rawData/final/en_US/en_US.news.txt")$size/1024^2, 2)
+# fileSizeTwitter <- round(file.info("C:/Users/czwea/Documents/GitHub/Capstone/data/rawData/final/en_US/en_US.twitter.txt")$size/1024^2,2)
+# 
+# numOflinesBlogs <- comma(length(englishBlogs))
+# numOflinesNews <- comma(length(englishNews))
+# numOflinesTwitter <- comma(length(englishTwitter))
+# 
+# numOfwordsBlogs <- comma(word_count(englishBlogs, byrow = FALSE))
+# numOfwordsNews <- comma(word_count(englishNews, byrow = FALSE))
+# numOfwordsTwitter <- comma(word_count(englishTwitter, byrow=FALSE))
+# 
+# #Create a summary dataframe
+# File_Name <- c("English Blogs", "English News", "English Twitter")
+# File_Size_MB <-c(fileSizeBlogs, fileSizeNews, fileSizeTwitter)
+# No_of_Rows <- c(numOflinesBlogs, numOflinesNews, numOflinesTwitter)
+# No_of_Words <- c(numOfwordsBlogs, numOfwordsNews, numOfwordsTwitter)
+# 
+# data_summary <- data.frame(File_Name, File_Size, No_of_Rows, No_of_Words)
+
+#lets save this so time can be saved from all the processing required to create the table
+#save(data_summary, file="~/Github/Coursera_DataScientist/Capstone/data/data_Summary.Rda")
+
+load("~/Github/Coursera_DataScientist/Capstone/data/data_Summary.Rda")
+#exists("capstone1.Rda")#Hoperfully returns true!
+datatable(data_summary, caption = "Data File Information - Before Processing", options = list(searching=FALSE, paging=FALSE))
+```
+
+Recognize that this is just the raw data as we receive it.  There are many examples in the data where punctuation, misspelled words, numbers and other entries that will need to be corrected.
+
+##Clean the Texual Data
+
+A quick Note: Application performance always provides a challenging balance between features and the speed of an application.  The application I envision will assume to be run on a relatively new PC - desktop or laptop/tablet.  I do not recommend running the application on a slower machine or different device.  The application is not intended to support this. This is important because the size of the sample dataset I select below is based on this assumption.
+
+R is a wonderful programming language?  Why?  Many reasons but one very significant one is that the R Community has creating 1,000s of packages to perform specific functions.  There is practically a package that can be added to R to do any job.  This includes preparing and cleaning text data for analystics!
+
+Several R packages will be used to clean and prepare our data files. I will be making a number of changes to the data.  So you can follow along, I have prepared a small subset of the englishTwitter data to illustrate some of the changes that will be made.
+
+Let's get started. We will do two things:
+
+1. Select 1,000 lines of random text data from englishBlogs and englishNews.  To this collection of data, we will augment it with another 2,000 lines of random data from englishTwitter.  Twitter will provide more data to the test data collection because it has more than 2X the number of records.  **Why?**  The total amount of data to process with the full text files pushes the boundaries of the RAM and CPU capabilities of the PC this analysis is being performed. (I attempted to use a total of 400,000  and 40,000 lines of data but the processing time was unacceptable.)
+2.  Commensurate with Step 1, a smaller file will undergo the same manipulations.  We'll use this smaller test file to illustrate the changes the larger data set is experiencing.  Hopefully this makes it easier to understand the cleaning process.  I'll select representative lines from the sample data to highlight changes.
+
+Here is the sample data that will be used to guide our text changes:
+```{r eval=FALSE}
+ [1] "they've decided its more fun if I don't."                                                                                       
+ [2] "So Tired D; Played Lazer Tag & Ran A LOT D; Ughh Going To Sleep Like In 5 Minutes ;)"
+ [3] "Words from a complete stranger! Made my birthday even better :)"
+ [4] "RT : According to the National Retail Federation $16.3 BILLION was spent on #MothersDay last year!!"
+ [5] "Athletes/celebrities should have a tool to charge $.99 per RT request. $ to support foundations/charities, fans get involved."
+ [6] "I'm taking Adam! :-)"
+ [7] "#Inspiring RT : Great minds must be ready not only to take opportunities, but to make them. --Colton"
+ [8] "med school...wow! I could never do that. Am too OCD to be around blood and sick people for long periods of time ;)"
+ [9] "â€œ: yeah, l could be the bigger person, or you could just shut the fuck up.â€"
+[10] "Join the Maui Mall Shoppers Club at www.mauimall.com. We give away three great prizes monthly, including $100 gift certificate to the mall!"
+[11] "Hey Boston-busy tonight? If not, come check out the lineup@ TT's (central sq) featuring my clients What Time is it Mr. Fox?!"
+```
+First, we will change the text to lower case:
+```{r sampleDataToLower, echo=FALSE, warning=FALSE, message=FALSE}
+library(tm)
+library(qdap)
+library(qdapRegex)
+#qdapRegex is a collection of regular expression tools associated with the qdap package that may be useful outside of the context of discourse analysis. Tools include removal/extraction/replacement of abbreviations, dates, dollar amounts, email addresses, hashtags, numbers, percentages, citations, person tags, phone numbers, times, and zip codes
+
+#Create a sample data text file
+#set seed to make the analysis reproducible
+set.seed(52001)
+small_Blogs <- englishBlogs [sample(1:length(englishBlogs), 1000)]
+small_News <- englishNews[sample(1:length(englishNews), 1000)]
+small_Twitter <- englishTwitter[sample(1:length(englishTwitter), 2000)]
+small_Dataset <- c(small_Blogs, small_News, small_Twitter)
+
+#Remove uneeded objects
+rm(englishBlogs)
+rm(englishNews)
+rm(englishTwitter)
+rm(small_Blogs)
+rm(small_News)
+rm(small_Twitter)
+
+sampleTwitterDF_AFTER <- tolower(stripWhitespace(sampleTwitterDF))
+small_Dataset_After <- tolower(stripWhitespace(small_Dataset))
+
+sampleTwitterDF_AFTER[8:10]
+```
+Do you see the URL in the last line above?  Let us now remove URLs from our test files:
+```{r removeURL, echo=FALSE, warning=FALSE, message=FALSE}
+sampleTwitterDF_AFTER <- rm_url(sampleTwitterDF_AFTER, clean = TRUE)
+small_Dataset_After <- rm_url(small_Dataset_After, clean = TRUE)
+
+sampleTwitterDF_AFTER[8:10]
+```
+Next we will remove the text that are not words.  Let's see what changes:
+```{r removeNonWords, echo=FALSE}
+sampleTwitterDF_AFTER <- rm_non_words(sampleTwitterDF_AFTER)
+small_Dataset_After <- rm_non_words(small_Dataset_After)
+
+sampleTwitterDF_AFTER[8:11]
+```
+Here are a few of the changes we have made after removing non-words:
+
+- punctuation marks have been removed.  Ex. Line [1] - *;)* removed.  *!* removed from Line[4]
+- strange characters have been removed.  Ex. Line [2] - *€* removed
+- the *() removed from (central sq) in line [4]
+
+This sounds a bit technical but we will now remove non-ASCII characters.  Do not worry, I'll provide an example:
+```{r removeNonASCII, echo=FALSE}
+sampleTwitterDF_AFTER <- rm_non_ascii(sampleTwitterDF_AFTER)
+small_Dataset_After <- rm_non_ascii(small_Dataset_After)#this takes a bit of time
+
+sampleTwitterDF_AFTER[9]
+```
+Note that a strange character has been removed.  (Look for *â*. It was originally in Line [9])
+
+Now we will remove contractions and change them to the alphabetic versions consisting of 2 or more words[^4].
+```{r removeContractions, echo = FALSE}
+sampleTwitterDF_AFTER <- replace_contraction(sampleTwitterDF_AFTER)
+small_Dataset_After <- replace_contraction(small_Dataset_After)#this takes time
+
+sampleTwitterDF_AFTER[1]
+```
+This sure looks better.  Note these changes:
+
+- Line [1]:  *they've*  and *don't* have been replaced with *They have* and *do not*.  (Looks like we will need to change to lower case again!)
+```{r toLower2, echo=FALSE}
+sampleTwitterDF_AFTER <- tolower(sampleTwitterDF_AFTER)
+small_Dataset_After <- tolower(small_Dataset_After)
+```
+
+The last step is an unfortunate one  With the cultural rise of entitled incivility in the United States, our ability to effectively communicate without the use of profanity seems challenging.  As a result, words deemed profane will be removed from our data.[^1] 
+```{r removeProfane, echo=FALSE, message=FALSE, warning=FALSE}
+badWords <- readLines("~/Github/Coursera_DataScientist/Capstone/data/badWords.txt")
+
+#To use the tm_map function, need to create a corpus
+small_Dataset_After_Corpus <- VCorpus(VectorSource(small_Dataset_After), readerControl = list(reader=readPlain, language="english"))
+small_Dataset_After_Corpus <- tm_map(small_Dataset_After_Corpus, removeWords, badWords)#takes time
+
+sampleTwitterDF_AFTER_CORPUS <- VCorpus(VectorSource(sampleTwitterDF_AFTER), readerControl = list(reader=readPlain, language="english"))
+sampleTwitterDF_AFTER_CORPUS <- tm_map(sampleTwitterDF_AFTER_CORPUS, removeWords, badWords)
+
+sampleTwitterDF_AFTER <- as.data.frame(sampleTwitterDF_AFTER_CORPUS)
+sampleTwitterDF_AFTER[9,2]
+
+save(small_Dataset_After_Corpus, file="~/Github/Coursera_DataScientist/Capstone/data/small_Dataset_After_Corpus.txt")
+save(sampleTwitterDF_AFTER_CORPUS, file="~/Github/Coursera_DataScientist/Capstone/data/sampleTwitterDF_AFTER_Corpus.txt")
+
+rm(badWords)
+rm(small_Dataset)
+#rm(small_Dataset_After)
+rm(sampleTwitterDF_AFTER)
+rm(sampleTwitterDF_AFTER_CORPUS)
+
+```
+In the line above, an objectionable course word *f##k* was removed.
+
+>NOTE:  Usually when text data is prepared for analysis, *stop words* are removed.  Stop words  are the most common words used but provide little meaning.  Words such as *for*, *very*, *of*, and *etc* are examples. Because we are going to build a next word predictor, it would be detrimental to remove stop words from our data set.
+
+##Analyze the Text Data
+
+```{r makeMatrix, warning=FALSE, message=FALSE, echo=FALSE}
+
+textDoc <- DocumentTermMatrix(small_Dataset_After_Corpus)
+transpose_textDoc <- TermDocumentMatrix(small_Dataset_After_Corpus)
+word_frequency <- colSums(as.matrix(textDoc))   
+#length(word_frequency)   
+word_frequency_order <- order(word_frequency) 
+textDoc_sparse <- removeSparseTerms(textDoc, 0.1)#Max 10% empty space
+#inspect(textDoc_sparse)
+```
+There are are number of ways we can analyze the data we have prepared.
+
+- Word Frequency
+- Plot Word Frequency
+- Word Clouds
+- n-grams
+
+###Word Frequency
+
+Let's discover the most and least frequently recurring words in our data:
+
+Most frequent terms are:
+```{r wordMostfreq, echo=FALSE}
+word_frequency[tail(word_frequency_order)]#most requent
+```
+Some of the words that appear very infrequently:
+```{r wordsLeastfreq, echo=FALSE}
+word_frequency[head(word_frequency_order)]#least frequent
+```
+
+```{r wordsUsedcount, echo=FALSE}
+#Can create a data frame with this information - will use this for plotting
+word_frequency_DF <- data.frame(word=names(word_frequency), freq=word_frequency)  
+```
+
+###Plot Word Frequency
+
+We can take the information we collected above and present it graphically.
+```{r plotWordfreq, warning=FALSE, message=FALSE, echo=FALSE}
+library(ggplot2)   
+     p <- ggplot(subset(word_frequency_DF, freq>200), aes(word, freq))    
+     p <- p + geom_bar(stat="identity")   
+     p <- p + theme(axis.text.x=element_text(angle=45, hjust=1))   
+     p   
+```
+
+###Word Cloud
+
+A word cloud usually provides a first overview of the word frequencies. The word cloud displays the data of the aggregated sample file.
+```{r, wordCloud, echo=FALSE, message=FALSE, warning=FALSE}
+library(wordcloud)
+library(RColorBrewer)
+#display.brewer.all()
+wordcloud(names(word_frequency), word_frequency, min.freq = 150, scale = c(6, 2),max.words=100, rot.per = 0.5, colors = brewer.pal(9, "Set1"))
+
+```
+ 
+##The N-Gram Tokenization
+
+In Natural Language Processing (NLP), an *n*-gram is a contiguous sequence of n items from a given sequence of text or speech.  The analysis of *n*-grams gives information which words are more likely to be found combined in a sentence. *n*-grams are typically called unigrams, bigrams, trigrams, etc. depending upon the number of words selected.  Below, *n*-grams with 2 to 5 words are analyzed
+
+Here are the plots of n-grams with the top 10 words or phrases.
+
+```{r ngram, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+library(RWeka)
+library(gridExtra)
+ngram2 <- NGramTokenizer(small_Dataset_After, Weka_control(min=2, max=2, delimiters=" \\r\\n\\t.,;:\"()?!=$"))
+ngram3 <- NGramTokenizer(small_Dataset_After, Weka_control(min=3, max=3, delimiters=" \\r\\n\\t.,;:\"()?!=$"))
+ngram4 <- NGramTokenizer(small_Dataset_After, Weka_control(min=4, max=4, delimiters=" \\r\\n\\t.,;:\"()?!=$"))
+ngram5 <- NGramTokenizer(small_Dataset_After, Weka_control(min=5, max=5, delimiters=" \\r\\n\\t.,;:\"()?!=$"))
+
+ngram2_table <- data.frame(table(ngram2))
+ngram2_table <- ngram2_table[order(ngram2_table$Freq,decreasing = TRUE),]
+ngram2_table <- ngram2_table[1:10,]
+colnames(ngram2_table) <- c("Word","Frequency")
+ngramPlot2 <- ggplot(ngram2_table, aes(y=Frequency, x=Word, fill=Frequency) ) + 
+     geom_text(aes(label=Frequency), hjust=0) +
+     geom_bar(stat="Identity") +
+     coord_flip() +
+     labs(title="Bigram") +
+     theme(axis.text.x = element_text(vjust = 0)) +
+     scale_fill_distiller(palette="Spectral")
+
+ngram3_table <- data.frame(table(ngram3))
+ngram3_table <- ngram3_table[order(ngram3_table$Freq,decreasing = TRUE),]
+ngram3_table <- ngram3_table[1:10,]
+colnames(ngram3_table) <- c("Word","Frequency")
+ngramPlot3 <- ggplot(ngram3_table, aes(y=Frequency, x=Word, fill=Frequency) ) + 
+     geom_text(aes(label=Frequency), hjust=0) +
+     geom_bar(stat="Identity") +
+     coord_flip() +
+     labs(title="Trigram") +
+     theme(axis.text.x = element_text(vjust = 0)) +
+     scale_fill_distiller(palette="Spectral")
+
+ngram4_table <- data.frame(table(ngram4))
+ngram4_table <- ngram4_table[order(ngram4_table$Freq,decreasing = TRUE),]
+ngram4_table <- ngram4_table[1:10,]
+colnames(ngram4_table) <- c("Word","Frequency")
+ngramPlot4 <- ggplot(ngram4_table, aes(y=Frequency, x=Word, fill=Frequency) ) + 
+     geom_text(aes(label=Frequency), hjust=0) +
+     geom_bar(stat="Identity") +
+     coord_flip() +
+     labs(title="Quadgram") +
+     theme(axis.text.x = element_text(vjust = 0)) +
+     scale_fill_distiller(palette="Spectral")
+
+ngram5_table <- data.frame(table(ngram5))
+ngram5_table <- ngram5_table[order(ngram5_table$Freq,decreasing = TRUE),]
+ngram5_table <- ngram5_table[1:10,]
+colnames(ngram5_table) <- c("Word","Frequency")
+ngramPlot5 <- ggplot(ngram5_table, aes(y=Frequency, x=Word, fill=Frequency) ) + 
+     geom_text(aes(label=Frequency), hjust=0) +
+     geom_bar(stat="Identity") +
+     coord_flip() +
+     labs(title="5-gram") +
+     theme(axis.text.x = element_text(vjust = 0)) +
+     scale_fill_distiller(palette="Spectral")
+
+grid.arrange(ngramPlot2, ngramPlot3, ngramPlot3, ngramPlot5)
+```
+
+##Findings
+
+- Loading the dataset takes a lot of time. The processing is time consuming because of the huge file size of the dataset. Because of computing limitations, a sample of the original data was needed.  This  decreases the accuracy for the subsequent predictions.  Need to figure out how to improve this.
+- Because Twitter data consists of shorthand, colloquial writing, consider if this is the best source for word prediction.  Might want to consider providing less weight to the Twitter data.
+
+##Next Steps For The Prediction Application
+
+The next step of the Capstone Project will be to create a prediction algorithm and develop a Shiny application.  This dictates the algorithm must be purposely built to perform quickly.  Therefore, the following concepts need to be evaluated:
+
+- Find ways to process larger datasets. Perhaps attempt to process the entire data set.
+- Further evaluate tm, RWeka, NLP, OpenNLP, stringi, and stylo to understand language modelling more thoroughly
+- Evaluate different n-gram algorithms
+- Design a methodology to measure n-gram performance
+- Determine the type of prediction algorithm to use.
+- Consider using another dictionary to devise better n-grams
+- Consider using 2 sets of data.  One without common words and the other with common words.  Perhaps when a common word is entered, the latter data set may provide better predictive value.
+- Add metadata to the word lists to identify the type of word (noun, adjective, etc).  This might provide a path to improve predict accuracy.
+
+##Shiny Application Plans
+
+The planned Shiny Application will (hopefully) analyze the full text files to look at strings of words. There will be an input box to take in a text string. The algorithm will look at the word(s) and show the predicted next word or words. I need to determine what to do if no word is predicted. 
+
+The design of the application will likely be a default 2-panel design.  As I get further into the process, this will evolve.
+
+##References
+
+- [Helpful Guide using qdap](http://trinker.github.io/qdap/vignettes/qdap_vignette.html#clean0)
+- [Outstanding refernce doing basic text mining in R](https://rpubs.com/pjmurphy/31867)
+- [qdapRegex Guide](https://cran.r-project.org/web/packages/qdapRegex/qdapRegex.pdf)
+- [Outstanding documnet leading you rhrough text mining with R](http://onepager.togaware.com/TextMiningO.pdf)
+- [Another document on text mining in R - Helpful](http://www.unt.edu/rss/class/Jon/Benchmarks/TextMining_L_JDS_Jan2014.pdf)
+- Reliance on the guidance provided in the Coursera Course Discussion Forum
+
+##Appendix - The R Code
+```{r appendix, echo=TRUE, eval=FALSE, ref.label=all_labels()}
+
+```
+
+##Session Information
+```{r}
+sessionInfo()
+```
+
+##Footnotes
+[^1]: [Bad Words from Google](https://code.google.com/archive/p/badwordslist/downloads)

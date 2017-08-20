@@ -1,0 +1,703 @@
+---
+title: "Preprocessign Data with `caret`"
+output:
+  html_document:
+    highlight: pygments
+    theme: spacelab
+    toc: yes
+header-includes: \usepackage{graphicx} \usepackage{mathtools}
+---
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+rm(list=ls())
+#Remove all packages loaded in environment
+try(lapply(paste('package:', names(sessionInfo()$otherPkgs), sep=""), detach, character.only=TRUE, 
+           unload=TRUE), silent = TRUE)
+if(!require(easypackages)){install.packages("easypackages")}
+library(easypackages)
+packages("plyr", "caret", "mlbench", "proxy", "pls,", "ggplot2", "downloader", "earth", 
+         "recipes", "MASS", "AppliedPredictiveModeling", "pls", prompt = FALSE)
+```
+
+## Introduction
+
+`caret`, short for _C_lassification _A_nd _RE_gression _T_raining, is a set of functions that streamline the process for creating predictive models.   Its two chief benefits are a uniform interface and standardization of common tasks.  The package contains tools for:
+
+- data splitting
+- pre-processing
+- feature selection
+- model tuning using resampling
+- variable importance estimation
+
+> [Caret Package Cheatsheet](https://www.analyticsvidhya.com/infographics/Caret-Package-Infographic.pdf)
+
+This document provides examples of `caret` preprocessing features.
+
+## Pre-Processing
+
+`caret` (**C**lassification **A**nd **R**egression **T**raining ) includes several functions to pre-process the predictor data. `caret`assumes that all of the data are numeric (i.e. factors have been converted to dummy variables via `model.matrix`, `dummyVars` or other means). 
+
+* Data Splitting
+* Dummy Variables
+* Zero- and Near Zero-Variance Predictors
+* Identifying Correlated Predictors
+* Linear Dependencies
+* Centering and Scaling
+* Imputation
+* Transforming Predictors
+* Class Distance Calculations
+
+> You may want to use parallel processing
+
+Setup parallel processing (assuming 6 cores in the example):
+
+`library(doParallel)`
+`rCluster <- makePSOCKcluster(6)`
+`registerDoParallel(rCluster)`
+
+```{r exampleData2, echo=FALSE, eval=FALSE}
+# Download Human Activity Recognition Using Smartphones Dataset
+URL <- "http://archive.ics.uci.edu/ml/machine-learning-databases/00240/UCI%20HAR%20Dataset.zip"
+zip.filename <- "UCI-HAR-Dataset.zip"
+download(URL, zip.filename, mode = "wb")
+unzip(zip.filename, exdir="./data")
+# Rename directory
+file.rename("./data/UCI HAR Dataset", "./data/Samsung-Human-Activity")
+SAMSUNG.DIR <- "./data/Samsung-Human-Activity"
+Activity.Names <- c("Walk", "WalkUp", "WalkDown", "Sit", "Stand", "Lying")
+
+# Helper function
+fetchGroup <- function(GROUP){
+     
+     # Read subject_GROUP.txt file
+     filename <- paste0(SAMSUNG.DIR, "/", GROUP, "/subject_", GROUP, ".txt")
+     s <- readLines(filename)
+     subject.id <- as.numeric(s)  # Convert to number
+     
+     # Human activity index:  y_GROUP.txt file
+     filename <- paste0(SAMSUNG.DIR, "/", GROUP, "/y_", GROUP, ".txt")
+     s <- readLines(filename)
+     activity.index <- as.numeric(s)    # Convert to number
+     
+     # Sensor Signals:  X_GROUP.txt file
+     filename <- paste0(SAMSUNG.DIR, "/", GROUP, "/X_", GROUP, ".txt")
+     s <- readLines(filename)
+     
+     # All records are 8976 bytes.  Observation of first few columns suggests 16 bytes/column.
+     # Therefore, must be 8976 / 16 = 561 columns = expected number of features in features.txt.
+     x <- scan(filename)           # fast way to parse very regular file
+     dim(x) <- c(561, length(s))   # Want a matrix
+     tx <- t(x)                    # Really want transpose in a data.frame
+     group.data <- data.frame(source=GROUP, subject.id=subject.id,
+                              activity=Activity.Names[activity.index],
+                              tx,  # deal with column names below
+                              stringsAsFactors=FALSE)
+     invisible(group.data )
+}
+
+test  <- fetchGroup("test")
+train <- fetchGroup("train")
+combinedData <- rbind(test, train)
+
+### Cleanup feature names to be more R "friendly"
+filename <- paste0(SAMSUNG.DIR, "/features.txt")
+feature.names <- read.table(filename, sep=" ", header=FALSE, as.is=TRUE)
+feature.names <- feature.names$V2   # only want 2nd column
+# Change "()" to "E" for "estimate" as in "estimated from these signals"
+feature.names <- gsub("\\()", "E", feature.names)
+# Remove dashes and commas
+feature.names <- gsub("-|,", ".", feature.names)
+# Fix angle data with paretheses. "(" -> ".". ")" -> ""
+feature.names <- gsub("\\(", ".", feature.names)
+feature.names <- gsub(")",   "",  feature.names)
+
+# Prefix all names with vNNN. to maintain link to original documentation. Can  be removed later.
+feature.names <- sprintf("v%3.3d.%s", 1:length(feature.names), feature.names)
+# Add "friendly" feature names to combined.data
+names(combinedData)[4:ncol(combinedData)] <- feature.names
+
+### Write to file for future use
+write.csv(combinedData, "./data/Samsung-Human-Activity.csv", row.names=FALSE)
+```
+```{r readExampleData2, echo=FALSE}
+combinedData <- read.csv("./data/Samsung-Human-Activity.csv")
+rawTrain <- combinedData[combinedData$source == "train",-1:-2]
+finalTest <- combinedData[combinedData$source == "test", -1:-2]
+```
+
+### Split Data
+
+#### Simple Splitting Based on the Outcome
+
+`createDataPartition` is used to create balanced splits of the data. If the y argument to this function is a factor, the random sampling occurs within each class and should preserve the overall class distribution of the data. 
+
+For example, to create a single 80/20% split of the iris data.  
+
+- `list = FALSE` avoids returns the data as a list
+- `times` creates multiple splits at once
+- `createResample` is used to make simple bootstrap samples and createFolds to generate balanced cross–validation groupings from a set of data
+- `createFolds` splits the data into k groups
+- `createTimeSlices` creates cross-validation split for series data
+- `groupKFold` splits the data based on a grouping factor
+
+
+```{r}
+trainIndex <- createDataPartition(iris$Species, p = .8, list = FALSE, times = 1)
+trainIndex5 <- createDataPartition(iris$Species, p = .8, list = FALSE, times = 5)
+head(trainIndex)
+```
+
+```{r}
+head(trainIndex5)
+```
+
+```{r}
+irisTrain <- iris[ trainIndex,]
+irisTest  <- iris[-trainIndex,]
+```
+
+A 2nd example to drive the concept home.
+
+```{r}
+TRAIN.PERCENT <- 0.75 
+inTrainSetIndex <- createDataPartition(y = rawTrain$activity, p=TRAIN.PERCENT, list=FALSE)
+training   <- rawTrain[ inTrainSetIndex, ]
+validation <- rawTrain[-inTrainSetIndex, ]
+```
+
+#### Splitting Based on Predictors
+
+`maxDissim` is used to create sub–samples using a [maximum dissimilarity](http://online.liebertpub.com/doi/abs/10.1089/106652799318382) approach. This is particularly useful for unsupervised learning where there are no response variables.
+
+Suppose data set A with m samples and a larger data set B with n samples. We may want to create a sub–sample from B that is diverse when compared to A. For each sample in B, the function calculates the m dissimilarities between each point in A. The most dissimilar point in B is added to A and the process continues. 
+
+There are many methods in R to calculate dissimilarity. `caret` uses `proxy`. `caret` includes two functions, `minDiss` and `sumDiss` that can be used to maximize the minimum and total dissimilarities.
+
+As an example, the figure below shows a scatter plot of two chemical descriptors for the Cox2 data. Using an initial random sample of 5 compounds, we can select 20 more compounds from the data so that the new compounds are most dissimilar from the initial 5 that were specified. The panels in the figure show the results using several combinations of distance metrics and scoring functions. For these data, the distance measure has less of an impact than the scoring method for determining which compounds are most dissimilar.
+
+```{r}
+data(BostonHousing)
+```
+```{r caretDiss}
+#Function modified from carate help file
+caretDiss <- function(pct = 1, obj = minDiss, ...){
+################### Change ###################   
+     tmp <- scale(BostonHousing[, c("age", "nox")])
+     
+     ## start with 10 data points
+     start <- sample(1:dim(tmp)[1], 10)
+     base <- tmp[start,]
+     pool <- tmp[-start,]
+     
+     ## select 20 for addition
+     newSamp <- maxDissim(base, pool, n = 20, randomFrac = pct, obj = obj, ...)
+################### End Change ################### 
+     
+     allSamp <- c(start, newSamp)
+     plot(
+          tmp[-newSamp,], 
+          xlim = extendrange(tmp[,1]), ylim = extendrange(tmp[,2]), 
+          col = "darkgrey", 
+          xlab = "variable 1", ylab = "variable 2")
+     points(base, pch = 16, cex = .7)
+     
+     for(i in seq(along = newSamp))
+          points(
+               pool[newSamp[i],1], 
+               pool[newSamp[i],2], 
+               pch = paste(i), col = "darkred")}
+```
+```{r}
+par(mfrow=c(2,2))
+
+caretDiss(1, minDiss)
+title("No Random Sampling, Min Score")
+caretDiss(.1, minDiss)
+title("10 Pct Random Sampling, Min Score")
+caretDiss(1, sumDiss)
+title("No Random Sampling, Sum Score")
+caretDiss(.1, sumDiss)
+title("10 Pct Random Sampling, Sum Score")
+```
+
+#### Time Series Data Splitting
+
+Simple random sampling of time series is a poor way to resample times series data. `caret` contains a function called `createTimeSlices` that creates the indices for this type of splitting.  Typically used with `trControl`.
+
+The three parameters for this type of splitting are:
+
+- `initialWindow`: the initial number of consecutive values in each training set sample
+- `horizon`: The number of consecutive values in test set sample
+- `fixedWindow`: A logical: if FALSE, the training set always start at the first sample and the training set size will vary over data splits.
+
+```{r createTimeSlicesData}
+data(economics)#ggplot2
+head(economics)
+```
+```{r createTimeSliceExample}
+myTimeControl <- trainControl(method = "timeslice", initialWindow = 36, horizon = 12, fixedWindow = TRUE)
+
+plsFitTime <- train(unemploy ~ pce + pop + psavert, data = economics, method = "pls",
+                    preProc = c("center", "scale"), trControl = myTimeControl)
+```
+
+A better example can be found here: https://r-norberg.blogspot.com/2016/08/data-splitting-time-slices-with.html.  It include a function for irregular timeslices!
+
+#### Splitting with Important Groups
+
+In some cases there is an important qualitative factor in the data that should be considered during (re)sampling. In clinical trials there may be hospital-to-hospital differences with repeated measures data or subjects may have multiple rows in the data set.  You want to ensure these groups are not contained in the training and testing set since this may bias the test set performance to be more optimistic. 
+
+To split the data base by groups, `groupKFold` can be used.  (This was added to `caret` in version 6.0-76.)
+
+```{r}
+subjects <- sample(1:20, size = 80, replace = TRUE)
+table(subjects)
+```
+```{r}
+folds <- groupKFold(subjects, k = 15) 
+folds[1:2]
+```
+
+The results in folds can be used as inputs into the index argument of `trainControl`.
+
+### Dummy Variables
+
+`dummyVar`s can be used to generate a complete (less than full rank parameterized) set of dummy variables from one or more factors. The function takes a formula and a data set and outputs an object that can be used to create the dummy variables using the predict method. 
+
+For example, the etitanic data set in `earth` includes two factors: pclass1 (with levels 1st, 2nd, 3rd) and sex (with levels female, male). `model.matrix` from `stats` generates the following variables: 
+
+```{r message=FALSE}
+data(etitanic)#earth
+head(model.matrix(survived ~ ., data = etitanic))#stats
+```
+
+Using `dummyVars`: 
+
+```{r}
+dummies <- dummyVars(survived ~ ., data = etitanic)
+head(predict(dummies, newdata = etitanic))
+```
+
+Note there is no intercept and each factor has a dummy variable for each level so this parameterization may not be useful for some model functions such as lm. 
+
+### Zero and Near-Zero-Variance Predictors
+
+In some situations, the data generating mechanism can create predictors that only have a single unique value (i.e. a "zero-variance predictor"). For many models (excluding tree-based models), this may cause the model to crash or the fit to be unstable. 
+
+Similarly, predictors might have only a handful of unique values that occur with very low frequencies. For example, in the drug resistance data, the nR11 descriptor (number of 11-membered rings) data have a few unique numeric values that are highly unbalanced: 
+```{r}
+data(mdrr)
+data.frame(table(mdrrDescr$nR11))
+```
+
+The concern here that these predictors may become zero-variance predictors when the data are split into cross-validation/bootstrap sub-samples or that a few samples may have an undue influence on the model. These "near-zero-variance" predictors may need to be identified and eliminated prior to modeling. 
+
+To identify these types of predictors, the following two metrics can be calculated: 
+* the frequency of the most prevalent value over the second most frequent value (called the "frequency ratio''), which would be near one for well-behaved predictors and very large for highly-unbalanced data>
+* the "percent of unique values'' is the number of unique values divided by the total number of samples (times 100) that approaches zero as the granularity of the data increases>
+
+If the frequency ratio is less than a pre-specified threshold and the unique value percentage is less than a threshold, we might consider a predictor to be near zero-variance. 
+
+We would not want to falsely identify data that have low granularity but are evenly distributed, such as data from a discrete uniform distribution. Using both criteria should not falsely detect such predictors. 
+
+Looking at the MDRR data, the nearZeroVar function can be used to identify near zero-variance variables (the saveMetrics argument can be used to show the details and usually defaults to FALSE): 
+```{r}
+nzv <- nearZeroVar(mdrrDescr, saveMetrics= TRUE)
+nzv[nzv$nzv,][1:10,]
+```
+```{r}
+dim(mdrrDescr)
+```
+```{r}
+nzv <- nearZeroVar(mdrrDescr)
+filteredDescr <- mdrrDescr[, -nzv]
+dim(filteredDescr)
+```
+
+By default, nearZeroVar will return the positions of the variables that are flagged to be problematic. 
+
+Here is another example to drive the concept home.
+
+```{r}
+dim(rawTrain)
+```
+```{r}
+#Be patient - lots of data!
+nzv <- nearZeroVar(rawTrain, saveMetrics=TRUE) 
+count_nzv <- sum(nzv$nzv) 
+count_nzv #since thae data is high precision numerical data, everything is unique!
+if (count_nzv > 0){
+     rawTrain <- rawTrain[, !nzv$nzv] 
+     finalTest <- finalTest[, !nzv$nzv]
+     }
+```
+
+### Correlated Predictors
+
+While there are some models that thrive on correlated predictors (such as pls), other models  benefit from reducing or removing the level of correlation between the predictors. 
+
+Given a correlation matrix, `findCorrelation` uses the following algorithm to flag predictors for removal: 
+
+```{r}
+descrCor <-  cor(filteredDescr)
+highCorr <- sum(abs(descrCor[upper.tri(descrCor)]) > .999)
+```
+
+For the previous MDRR data, there are 65 descriptors that are almost perfectly correlated (|correlation| > 0.999) such as the total information index of atomic composition (IAC) and the total information content index (neighborhood symmetry of 0-order) (TIC0) (correlation = 1). 
+
+```{r}
+cor(filteredDescr$IAC, filteredDescr$TIC0)
+```
+
+The code chunk below shows the effect of removing descriptors with absolute correlations above 0.75. 
+
+```{r}
+summary(descrCor[upper.tri(descrCor)])
+```
+```{r}
+highlyCorDescr <- findCorrelation(descrCor, cutoff = .75)
+filteredDescr <- filteredDescr[,-highlyCorDescr]
+descrCor2 <- cor(filteredDescr)
+summary(descrCor2[upper.tri(descrCor2)])
+```
+
+Here is another example to help you remember this important function.
+
+```{r}
+CUTOFF <- 0.90 
+cor_matrix <- cor(rawTrain[,-1]) 
+cor_high <- findCorrelation(cor_matrix, CUTOFF)
+high_cor_remove <- row.names(cor_matrix)[cor_high] 
+head(high_cor_remove, 8)
+length(high_cor_remove)
+rawTrain <- rawTrain[,   -cor_high] 
+finalTest <- finalTest[, -cor_high] 
+```
+
+### Linear Dependencies
+
+The function **findLinearCombos** uses the QR decomposition of a matrix to enumerate sets of linear combinations (if they exist). For example, consider the following matrix that is could have been produced by a less-than-full-rank parameterizations of a two-way experimental layout: 
+
+```{r}
+ltfrDesign <- matrix(0, nrow=6, ncol=6)
+ltfrDesign[,1] <- c(1, 1, 1, 1, 1, 1)
+ltfrDesign[,2] <- c(1, 1, 1, 0, 0, 0)
+ltfrDesign[,3] <- c(0, 0, 0, 1, 1, 1)
+ltfrDesign[,4] <- c(1, 0, 0, 1, 0, 0)
+ltfrDesign[,5] <- c(0, 1, 0, 0, 1, 0)
+ltfrDesign[,6] <- c(0, 0, 1, 0, 0, 1)
+ltfrDesign
+```
+
+Note that columns two and three add up to the first column. Similarly, columns four, five and six add up the first column. `findLinearCombos` will return a list that enumerates these dependencies. *This is often not easy to find in larger data sets!* For each linear combination, it will incrementally remove columns from the matrix and test to see if the dependencies have been resolved. `findLinearCombos` will also return a vector of column positions can be removed to eliminate the linear dependencies: 
+
+```{r}
+comboInfo <- findLinearCombos(ltfrDesign)
+comboInfo
+```
+```{r}
+ltfrDesign[, -comboInfo$remove]
+```
+
+### Centering and Scaling
+
+The **preProcess** class can be used for many operations on predictors, including centering and scaling. `preProcess` estimates the required parameters for each operation and `predict.preProcess` is used to apply them to specific data sets. 
+
+In the example below, half the `MDRR` data are used to estimate the location and scale of the predictors. `preProcess` doesn't actually pre-process the data. `predict.preProcess` is used to pre-process this and other data sets. 
+
+```{r}
+inTrain <- sample(seq(along = mdrrClass), length(mdrrClass)/2)
+
+training <- filteredDescr[inTrain,]
+glimpse(training)
+test <- filteredDescr[-inTrain,]
+trainMDRR <- mdrrClass[inTrain]
+glimpse(trainMDRR)
+testMDRR <- mdrrClass[-inTrain]
+
+preProcValues <- preProcess(training, method = c("center", "scale"))
+
+trainTransformed <- predict(preProcValues, training)
+glimpse(trainTransformed)
+testTransformed <- predict(preProcValues, test)
+```
+
+The `preProcess` option "ranges" scales the data to the interval [0, 1]. 
+
+### Imputation
+
+**preProcess** can be used to impute data sets based only on information in the training set. One method of doing this is with K-nearest neighbors. For an arbitrary sample, the K closest neighbors are found in the training set and the value for the predictor is imputed using these values (e.g. using the mean). Using this approach will automatically trigger preProcess to center and scale the data, regardless of what is in the method argument. 
+
+> By default, 5 nearest neighbors are being evaluated.  You can change it by specifying the parameter `k` in `preProcess`
+
+Evaluate knn imputation in several different ways:
+
+#### Single Missing Numeric Value
+```{r}
+model <- "knnImpute"
+iris_miss_1 <- iris[, -5]
+iris_miss_1[1,1] <- NA
+head(iris_miss_1, 3)
+test1 = preProcess(iris_miss_1, method = "knnImpute")
+test1Result <- predict(test1, iris_miss_1)
+head(test1Result, 3)
+```
+
+#### Single Missing Values in All Numeric Predictors
+```{r}
+iris_miss_2 <- iris[, -5]
+iris_miss_2[1,1] <- NA
+iris_miss_2[2,2] <- NA
+iris_miss_2[3,3] <- NA
+iris_miss_2[4,4] <- NA
+head(iris_miss_2,5)
+test2 = preProcess(iris_miss_2, method = "knnImpute")
+test2Result <- predict(test2, iris_miss_2)
+head(test2Result, 5)
+```
+
+#### Single Missing Values in Multiple Numeric Predictors
+```{r}
+iris_miss_3 <- iris[, -5]
+iris_miss_3[1, 1:2] <- NA
+head(iris_miss_3, 3)
+test3 = preProcess(iris_miss_3, method = "knnImpute")
+test3Result <- predict(test3, iris_miss_3)
+head(test3Result, 3)
+```
+
+#### Single Missing Values in All Numeric Predictors
+```{r}
+iris_miss_4 <- iris[, -5]
+iris_miss_4[1,] <- NA
+test4 = preProcess(iris_miss_4, method = "knnImpute")
+test4Result <- try(predict(test4, iris_miss_4), silent = TRUE)
+head(test4Result)#error
+```
+
+#### Single Missing Value in Categorical Predictor
+```{r eval=FALSE}
+iris_miss_5 <- iris
+iris_miss_5[1,5] <- NA
+set.seed(1)
+test5Result <- train(Sepal.Length ~ . , data = iris_miss_5, method = "lm", 
+           preProc = "knnImpute", na.action = na.pass)
+head(test5Result)#ends in error
+```
+
+#### Each Row with at Least 1 Missing Value
+```{r}
+iris_miss_6 <- iris[, -5]
+index <- 0
+for(i in 1:nrow(iris_miss_6)) {
+     index <- if(index < ncol(iris_miss_6)) index + 1 else 1
+     iris_miss_6[i, index] <- NA}
+test6 = preProcess(iris_miss_6, method = "knnImpute")
+test6Result <- try(predict(test6, iris_miss_6), silent = TRUE)
+head(test6Result)
+```
+
+Alternatively, bagged trees can also be used to impute. For each predictor in the data, a bagged tree is created using all of the other predictors in the training set. When a new sample has a missing predictor value, the bagged model is used to predict the value. While, in theory, this is a more powerful method of imputing, the computational costs are much higher than the nearest neighbor technique. 
+
+Run the same test above  replacing `knnImpute` with `bagImpute`.
+
+#### Single Missing Numeric Value
+```{r}
+iris_miss_1 <- iris[, -5]
+iris_miss_1[1,1] <- NA
+head(iris_miss_1, 3)
+test1 = preProcess(iris_miss_1, method = "bagImpute")
+test1Result <- predict(test1, iris_miss_1)
+head(test1Result, 3)
+```
+
+#### Single Missing Values in All Numeric Predictors
+```{r}
+iris_miss_2 <- iris[, -5]
+iris_miss_2[1,1] <- NA
+iris_miss_2[2,2] <- NA
+iris_miss_2[3,3] <- NA
+iris_miss_2[4,4] <- NA
+head(iris_miss_2,5)
+test2 = preProcess(iris_miss_2, method = "bagImpute")
+test2Result <- predict(test2, iris_miss_2)
+head(test2Result, 5)
+```
+
+#### Single Missing Values in Multiple Numeric Predictors
+```{r}
+iris_miss_3 <- iris[, -5]
+iris_miss_3[1, 1:2] <- NA
+head(iris_miss_3, 3)
+test3 = preProcess(iris_miss_3, method = "bagImpute")
+test3Result <- predict(test3, iris_miss_3)
+head(test3Result, 3)
+```
+
+#### Single Missing Values in All Numeric Predictors
+```{r}
+iris_miss_4 <- iris[, -5]
+iris_miss_4[1,] <- NA
+set.seed(1)
+test4 = preProcess(iris_miss_4, method = "bagImpute")
+test4Result <- try(predict(test4, iris_miss_4), silent = TRUE)
+head(test4Result)#error
+```
+
+#### Single Missing Value in Categorical Predictor
+```{r message=FALSE, warning=FALSE, eval=FALSE}
+iris_miss_5 <- iris
+iris_miss_5[1,5] <- NA
+set.seed(1)
+test5Result <- train(Sepal.Length ~ . , data = iris_miss_5, method = "lm", 
+           preProc = "bagImpute", na.action = na.pass)
+head(test5Result)#ends in error
+```
+
+#### Each Row with at Least 1 Missing Value
+```{r}
+iris_miss_6 <- iris[, -5]
+index <- 0
+for(i in 1:nrow(iris_miss_6)) {
+     index <- if(index < ncol(iris_miss_6)) index + 1 else 1
+     iris_miss_6[i, index] <- NA}
+
+test6 = preProcess(iris_miss_6, method = "bagImpute")
+test6Result <- try(predict(test6, iris_miss_6), silent = TRUE)
+head(test6Result)
+```
+
+### Transforming Predictors
+
+In some cases there is a need to use principal component analysis (PCA) to transform the data to a smaller sub–space where the new variables are uncorrelated with one another. The `preProcess` class can apply this transformation by including `pca` in the `method` argument. Doing this will also force scaling of the predictors. Note that when PCA is requested, `predict.preProcess` **changes the column names to PC1, PC2 and so on**.
+
+> In `preprocess` `thresh` is a cutoff for the cumulative percent of variance to be retained by PCA
+
+```{r}
+trans = preProcess(iris[,1:4], method=c("BoxCox", "center", "scale", "pca"))
+PC = predict(trans, iris[,1:4])
+head(PC, 5)
+```
+
+A second more thorough example on how to select a specific number of PCA components. Set pcaComp = 7 inside preProcess or use thresh = 0.8 and then apply your processing to the training and testing data. Remember, if you have categorical variables you must convert them first to dummy variables before you can apply your processing (center, scale, pca, etc.).
+
+```{r}
+data(Boston)#MASS
+train_idx <- createDataPartition(Boston$medv, p = 0.75, list = FALSE)
+
+train <- Boston[train_idx,]
+test <- Boston[-train_idx,]
+
+#Now using preProcess, you need to set the pcaComp = 7, or thresh = 0.8
+#you may need to center and scale first and then apply PCA or just use method = c("pca")
+#create the preProc object, remember to exclude the response (medv)
+preProc  <- preProcess(train[,-14], method = c("center", "scale", "pca"), pcaComp = 7) # or thresh = 0.8
+#Apply the processing to the train and test data, and add the response to the dataframes
+train_pca <- predict(preProc, train[,-14])
+train_pca$medv <- train$medv
+test_pca <- predict(preProc, test[,-14])
+test_pca$medv <- test$medv
+
+#you can verify the 7 comp
+head(train_pca)
+
+#Now fit your lm model
+fit <- lm(medv~., data = train_pca)
+fit$coefficients
+```
+
+Similarly, independent component analysis (ICA) can also be used to find new variables that are linear combinations of the original set such that the components are independent (as opposed to uncorrelated in PCA). The new variables will be labeled as IC1, IC2 and so on.  (I do not have an example of this - I have never used this feature.)
+
+The ["spatial sign” transformation](http://pubs.acs.org/doi/abs/10.1021/ci050498u) projects the data for a predictor to the unit circle in p dimensions, where p is the number of predictors. Essentially, a vector of data is divided by its norm. The two figures below show two centered and scaled descriptors from the MDRR data before and after the spatial sign transformation. The predictors should be centered and scaled before applying this transformation.
+
+```{r}
+data(mdrr)
+transparentTheme(trans = .4)
+plotSubset <- data.frame(scale(mdrrDescr[, c("nC", "X4v")]))
+xyplot(nC ~ X4v, data = plotSubset, groups = mdrrClass, auto.key = list(columns = 2))
+```
+
+After the spatial sign:
+```{r}
+transformed <- spatialSign(plotSubset)
+transformed <- as.data.frame(transformed)
+xyplot(nC ~ X4v, data = transformed, groups = mdrrClass, auto.key = list(columns = 2))
+```
+
+Another option, "**BoxCox**" will estimate a Box–Cox transformation on the predictors if the data are greater than zero.  (See the Appendix for a more thorough example.)
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+rm(list=ls())
+#Remove all packages loaded in environment
+try(lapply(paste('package:', names(sessionInfo()$otherPkgs), sep=""), detach, character.only=TRUE, 
+           unload=TRUE), silent = TRUE)
+if(!require(easypackages)){install.packages("easypackages")}
+library(easypackages)
+packages("caret","ggplot2", prompt = FALSE)
+```
+
+```{r message=FALSE, warning=FALSE}
+data(mdrr)
+nzv <- nearZeroVar(mdrrDescr)
+filteredDescr <- mdrrDescr[, -nzv]
+inTrain <- sample(seq(along = mdrrClass), length(mdrrClass)/2)
+training <- filteredDescr[inTrain,]
+test <- filteredDescr[-inTrain,]
+preProcValues2 <- preProcess(training, method = "BoxCox")
+trainBC <- predict(preProcValues2, training)
+testBC <- predict(preProcValues2, test)
+preProcValues2
+```
+
+The NA values correspond to the predictors that could not be transformed. This transformation requires the data to be greater than zero. 
+
+### Class Distance Calculations
+
+**caret** contains functions to generate new predictors variables based on distances to class centroids (similar to how linear discriminant analysis works). For each level of a factor variable, the class centroid and covariance matrix is calculated. For new samples, the Mahalanobis distance to each of the class centroids is computed and can be used as an additional predictor. This can be helpful for non-linear models when the true decision boundary is actually linear. 
+
+In cases where there are more predictors within a class than samples, the `classDist` function has arguments called `pca` and `keep` arguments that allow for principal components analysis within each class to be used to avoid issues with singular covariance matrices. 
+
+**predict.classDist** is then used to generate the class distances. By default, the distances are logged but this can be changed via the `trans` argument to `predict.classDist`. 
+
+```{r}
+trainSet <- sample(1:150, 100)
+distData <- classDist(iris[trainSet, 1:4], iris$Species[trainSet])
+newDist <- predict(distData, iris[-trainSet, 1:4])
+splom(newDist, groups = iris$Species[-trainSet])
+```
+
+## Appendix
+
+Inadequate data pre-processing is one of the common reasons on why some predictive models fail. 
+
+How your predictors are encoded can have a significant impact on model performance. For example, the ratio of two predictors may be more effective than using two independent predictors. This will depend on the model used as well as on the particularities of the phenomenon you want to predict. The manufacturing of predictors to improve prediction performance is called `feature engineering`. To succeed at this stage you should have *a deep understanding of the problem* you are trying to model.
+
+A good practice is to center, scale and apply skewness transformations for *each of the individual predictors*. This practice gives more stability for numerical algorithms used later in the fitting of different models as well as improve the predictive ability of some models. Box and Cox transformation, centering and scaling can be applied using `preProcess`  from `caret`.
+
+```{r message=FALSE, warning=FALSE}
+require(gridExtra)
+require(reshape2)
+
+predictors = data.frame(x1 = rnorm(1000, mean = 5, sd = 2), x2 = rexp(1000, rate=10))
+p1 = ggplot(predictors) + geom_point(aes(x = x1, y = x2))
+
+temp <- melt(predictors, measured = c("x1", "x2"))
+p2 = ggplot(temp) + geom_histogram(aes(x=value)) + facet_grid(. ~ variable, scales = "free_x")
+
+grid.arrange(p1, p2)
+
+trans <- preProcess(predictors, c("BoxCox", "center", "scale"))
+predictors_trans <- data.frame(trans = predict(trans, predictors))
+
+p1 = ggplot(predictors_trans) + geom_point(aes(x = trans.x1, y = trans.x2))
+temp <- melt(predictors_trans, measured = c("trans.x1", "trans.x2"))
+
+p2 = ggplot(temp) + geom_histogram(aes(x=value), data = temp) + 
+  facet_grid(. ~ variable, scales = "free_x")
+
+grid.arrange(p1, p2)
+```
+
+## References
+
+This document started as a near-copy of this well-known and often-imitated site:  http://topepo.github.io/caret/pre-processing.html.  I have added and changed the content over time as my expertise in preprocessing matures.  (It is a never-ending process!)

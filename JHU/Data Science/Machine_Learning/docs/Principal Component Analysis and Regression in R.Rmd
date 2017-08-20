@@ -1,0 +1,140 @@
+---
+title: "Principal Component Analysis and Regression in R"
+author: 
+date: "June 2016"
+output: html_document
+---
+Data from a silver-zinc battery that was collected to characterize the performace of the battery during its life cycle.
+
+First we will take a look at the data.
+
+```{r View the Data}
+# Input the data into R
+#Battery <- read.csv("./Machine_Learning/data/BatteryFailureData.csv", header=TRUE)#Internative
+Battery <- read.csv("../data/BatteryFailureData.csv", header=TRUE)#Use when knitting
+Battery <- Battery[1:20,]
+Battery$X <- NULL
+# View the data
+print(Battery)
+```
+
+We will consider the first five variables as the independent ones, and Cycles to Failure as the dependent variable.  Then we will regress the natural log of Cycles to Failure on the five independent variables.
+
+```{r Regression}
+#Perform the regression
+reg <- lm( log(CyclestoFailure) ~  ChargeRate + DischargeRate + DepthofDischarge + Temperature + EndofChargeVolt, data=Battery)
+#View the summary
+summary(reg)
+```
+
+There are several other useful functions for obtaining information about your regression.
+The value of lm() is a fitted model object; technically a list of results of class "lm". Information
+about the fitted model can then be displayed, extracted, plotted and so on by using generic
+functions that orient themselves to objects of class "lm". These include:
+
+- add1
+- deviance
+- formula
+- predict
+- step
+- alias
+- drop1
+- kappa 
+- print 
+- summary
+- anova 
+- effects 
+- labels 
+- proj 
+- vcov
+- coef 
+- family 
+- plot 
+- residuals
+
+```{r Useful functions with regression}
+# Confidence intervals for the model parameters
+confint(reg, level=0.95)
+ # Predicted values for each observation
+fitted(reg)
+# See the residuals for each observation
+residuals(reg)
+# See the ANOVA table
+anova(reg)
+# covariance matrix for model parameters 
+vcov(reg) 
+```
+
+As you can see, this model for regression does not fit the data very well.  To remedy the situation, we consider Principal Component Analysis.
+
+Principal Component Analysis, or PCA, is a multivariate statistical technique that converts a set of correlated variables into a set of orthogonal, uncorrelated axes called principal components. PCA models the variation in the set of original variables in terms of a smaller number of independent linear combinations of those original variables.  The goal is to extract as much information as possible about the variance-covariance structure of the variables using only a few principal components.  
+
+Here we take a look at it with our battery data.
+
+```{r Principal Components}
+#Find the Principal Components of the independent variables
+
+# Create a data frame with only the five independent variables
+Independent <- data.frame(Battery[1:5])
+
+# Perform the Principal Component Analysis
+PCAbatteries <- princomp(Independent)
+
+# View the summary
+summary(PCAbatteries)
+```
+Next it will be helpful to see a Scree Plot of the principal components. A scree plot displays the eigenvalues associated with each component in descending order versus the number of the component. You can use scree plots in principal components analysis to visually assess which components or factors explain most of the variability in the data.
+```{r }
+#  See the Scree Plot
+plot(PCAbatteries,type="lines", main="Scree Plot")
+```
+
+It is clear from the Scree Plot and from the proportion of variance that the first two principal components are the essential ones.  Those will be the ones regressed upon the dependent variable, Cycles to Failure. 
+
+The following functions will give you the evaluated principal components as well as the specific loadings.
+
+```{r }
+# View the evaluated principal components for each observation
+PCAbatteries$scores
+
+# View the specific loadings for each observation
+loadings(PCAbatteries)
+```
+
+In order to regress the principal components on the dependent variable, we need to create a new dataset of the principal components evaluated at each observation.
+
+```{r}
+# Create the new dataset of the principal components evaluated at each observation.
+PrincipalComponents <- data.frame(PCAbatteries$scores)
+New <- data.frame(PrincipalComponents[1:2],Battery[6])
+
+# View the new dataset to make sure it was created in the way we intended
+print(New)
+```
+
+Now that we see the dataset is correct, we can perform the regression of the first two principal components on the natural log of the dependent variable, Cycles to Failure.
+
+```{r}
+# Perform the regression
+reg2 <- lm( log(CyclestoFailure) ~  Comp.1 + Comp.2, data=New)
+
+# View the summary of the regression
+summary(reg2)
+```
+
+It does not appear that this model is much better. Let us try the regression with only the first principal component.
+
+```{r}
+# Perform the regression
+reg3 <- lm(log(CyclestoFailure) ~ Comp.1, data=New)
+#  View the summary
+summary(reg3)
+```
+
+Now we can use an ANOVA test to compare the previous two models.   The following code provides a simultaneous test that Comp.2 adds to linear prediction above and beyond Comp.1.
+
+```{r}
+anova(reg2, reg3)
+```
+
+The significance of this test means that the two models are indeed different.  However, neither of them looks to be a good model.

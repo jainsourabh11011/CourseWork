@@ -1,0 +1,176 @@
+---
+title: "Project Report - JHU Practical Machine Learning"
+output: html_document
+---
+
+*Cliff Weaver*  
+*November 12, 2015*  
+
+###Introduction
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, the goal is be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+###Project Goal
+
+The goal of the project is to predict the manner in which they did the exercise. This is the “classe” variable in the training set. 
+
+* describe how the model was built
+* how you used cross validation
+* what the expected out of sample error is
+* why you made the choices you did. 
+* use your prediction model to predict 20 different test cases.
+
+####Report Requirements
+* constrain the text of the write up to < 2000 words
+* the number of figures to be less than 5. 
+* apply the machine learning algorithm to the 20 test cases available in the test data above
+
+The following Libraries were used for this project, which you should install - if not done yet - and load on your working environment.
+```{r warning=FALSE, message=FALSE, results='hide'}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(randomForest)
+
+set.seed(2468) #Make the results reproducible
+```  
+###Data Sources
+
+Click on these links to download the data: [training data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+ - [test data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+###Getting the data
+
+Download and load the training and test data sets:
+```{r readData}
+trainingRAW <- read.csv("./data/pml-training.csv")
+testingRAW <- read.csv("./data/pml-testing.csv")
+```
+###Cleaning the Data
+
+The training data contains 160 columns and 19,622 rows.  Because of its size, the data is not displayed.  Reviewing the data suggests there many opportunities to clean the data set.
+
+Clean the data by:  
+
+* dropping first 7 columns
+* Removing columns with mostly zeros
+* Removing columns with NAs
+
+```{r cleanData}
+training <- trainingRAW[,-seq(1:7)]
+near0 <- nearZeroVar(training)
+training <- training[,-near0]
+# remove variables that are almost always NA
+removeNA <- sapply(training, function(x) mean(is.na(x))) > 0.95
+training <- training[, removeNA==F]
+```
+
+###Create Cross Validation Data
+
+The training set is divided in two parts, one for training (70%) and the other for cross validation (30%).
+
+```{r dataPartition}
+inTrain<-createDataPartition(training$classe, p = 0.7, list=FALSE)
+
+training70<-training[inTrain,]
+training30<-training[-inTrain,]
+```
+
+###Model Selection and Building
+
+The data demands a classification predictive model to determine which algorithm provides the most accurate forecast for the classe field.
+The **Random Forest** (rf) and **Gradient Boosting** (gbm) algorithms are selected for comparison because they consistently produce accurate results.  Kappa has been selected to compare accuracy of the models.
+
+To reduce the risk of overfitting, cross validation is employed during model building.
+
+**Notes**  Coursera Course Notes suggest cross validation when running random forest algorithms is important.  However, this source suggests cross validation is not required for random forests.  The error is estimated internally during the training.
+See this reference for [detail](http://docs.opencv.org/2.4/modules/ml/doc/random_trees.html)  Nonetheless, resampling is required for gbm and therefore must be used with rf so that the function **resamples** in the caret package can be used to compare the models without error. 
+
+The random forest and gradient boosting models are developed below.  Each model includes relevant output.  After the model output, the results are compared using the resamples function that contains the kappa results.
+
+Based on this information, the random forest algorithm produces a better model than the Gradient Boosting algorithm.  The random forest model produces a Kappa value of 0.989 compared to the gbm Kappa of 0.950.  Based on this information, the random forest classification model is selected as the preferred solution. 
+
+**Random Forest Classification**:  
+```{r modelBuild_rf, message=FALSE, warning=FALSE}
+modelFit_rf <- train(classe ~., method="rf", data=training70, trControl=trainControl(method="cv", number=4))
+modelFit_rf$finalModel
+```
+**Gradient Boosting Classification**:  
+```{r modelBuild_gbm, message=FALSE, warning=FALSE}
+modelFit_gbm <- train(classe~., data=training70, method="gbm", metric="Kappa", trControl=trainControl(method="cv", number=4),verbose=FALSE)
+head(summary(modelFit_gbm), 10)
+```
+***Model Comparision***:  
+```{r modelBuild_compare, message=FALSE, warning=FALSE}
+modelCompare <- resamples(list(rf=modelFit_rf,gbm=modelFit_gbm))
+summary(modelCompare)
+
+```
+###Model Evaluation
+Leverage the fitted model to predict the label (“classe”) in *training30* and use the confusion matrix to compare the predicted versus the actual labels.
+```{r}
+# use model to predict classe in validation set (training30)
+predict_validation <- predict(modelFit_rf, newdata=training30)
+# show confusion matrix to get estimate of out-of-sample error
+confusionMatrix(training30$classe, predict_validation)
+```
+The accuracy is 99.2% and the predicted accuracy for the out-of-sample error is 0.8%.  This is a favorable result. Thus, the random forest model will be used to predict classe results from the test data set (*testingRAW*).
+
+**Note**:  Before predicting on the test set, it is prudent to train the model on the full training set (*trainingRAW*), rather than using a model trained on a reduced training set (*training70*), to produce the most accurate predictions. However this computing step is skipped intentionally.  Attempting to run the **train** function results in a very long running task that exceeds the capabilities of the author's computer.
+
+```{r reTrainFullData}
+#modelFit_rf_AllData <- train(classe ~., method="rf", data=training) #This is the code that could be exexcuted
+```
+
+###Making Test Set Predictions
+
+Use the model fit on training to predict the label for the observations in testing and write those predictions to individual files.  The code below prepares the individual files to satisfy the 2nd part of the JHU MKachine Learning Course Project.
+```{r testAnswers}
+# predict on test set
+answers <- predict(modelFit_rf, newdata=testingRAW)
+
+# convert predictions to character vector
+answers <- as.character(answers)
+
+# create function to write predictions to files
+pml_write_files <- function(x) {
+    n <- length(x)
+    for(i in 1:n) {
+        filename <- paste0("problem_id_", i, ".txt")
+        write.table(x[i], file=filename, quote=F, row.names=F, col.names=F)
+    }
+}
+
+# create prediction files to submit
+pml_write_files(answers)
+```
+The random forest model predicts the following classe responses after running the test data set:
+```{r projectAnsers, message=FALSE, warning=FALSE}
+answers
+```
+***
+
+##Appendix
+
+Recursive Partitioning and Regression Trees Model
+```{r}
+library(rpart)
+
+rPartModel <- train(classe ~ ., data=training70, method="rpart", trControl=trainControl(method="cv"))
+fancyRpartPlot(rPartModel$finalModel)
+
+rPartTrainPred <- predict(rPartModel, newdata=training70)
+rPartTestPred <- predict(rPartModel, newdata=training30)
+trainingConfusion <- confusionMatrix(training70$classe, rPartTrainPred)
+testingConfusion <- confusionMatrix(training30$classe, rPartTestPred)
+print(testingConfusion$table)
+```
+
+rPart failed to provide accurate results and is presented in the here for information only.
+
+***
+###Reference  
+ 
+http://scg.sdsu.edu/rf_r/

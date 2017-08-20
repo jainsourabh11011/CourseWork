@@ -1,0 +1,10 @@
+name: myPredictor
+account: zellw
+server: shinyapps.io
+appId: 95768
+bundleId: 424842
+url: https://zellw.shinyapps.io/myPredictor/
+when: 1461068706.95996
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: notes/HowItWorks.md|notes/HowItWorks.Rmd|notes/myPredictionApp.md|notes/myPredictionApp.Rmd|notes/nextSteps.md|notes/nextSteps.Rmd|notes/textAnalytics.md|notes/textAnalytics.Rmd

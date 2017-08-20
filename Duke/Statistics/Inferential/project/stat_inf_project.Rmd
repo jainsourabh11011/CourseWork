@@ -1,0 +1,265 @@
+---
+title: "GSS Data:  Religion and Space Exploration"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+    toc: true
+    toc_depth: 4
+    toc_float:
+      collapsed:  true
+      smooth_scroll: true
+---
+
+## Part 1: Introduction & Data Source 
+The data used in this analysis is from the General Social Survey (GSS).  It is a sociological survey used to collect data on demographic characteristics and attitudes of residents of the United States. The survey is a representative sample of "English speaking persons 18 years of age or over, living in non-institutional arrangements within the United States". 
+
+This analysis is a retrospective observational study seeking to determine if there is a relationship between the frequency people participate in religious services - a measure of how religious they are - and their view on the government funding space exploration.
+
+The two variables evaluated are categorical variables.
+
+- *attend* which provides data on the GSS Survey the respondents participation in religious services.  
+- *natpsac*, which indicates the respondents thoughts on the amount of government spending which goes to the space program.
+
+
+**ATTEND**
+The survey question:  *How often do you attend religious services?*
+
+| **Value** | **Label** |
+| --------- | --------- |
+| 0 | Never |
+| 1 | LT ONCE A YEAR |
+| 2 | ONCE A YEAR |
+| 3 | SEVRL TIMES A YR |
+| 4 | ONCE A MONTH |
+| 5 | 2-3X A MONTH |
+| 6 | NRLY EVERY WEEK |
+| 7 | EVERY WEEK |
+| 8 | MORE THN ONCE WK |
+| NA | DK,NA | 
+
+
+**NATSPAC**
+The  survey question: *We are faced with many problems in this country, none of which can be solved easily or inexpensively. I'm going to name some of these problems, and for each one I'd like you to tell me whether you think we're spending too much money on it, too little money, or about the right amount: Space exploration program.*
+
+| **Value** | **Label** |
+| --------- | --------- |
+| NA | IAP |
+| 1 | TOO LITTLE |
+| 2 | ABOUT RIGHT |
+| 3 | TOO MUCH |
+| NA | DK |
+| NA | NA |
+
+## Part 2: Research question
+
+*Is there an association between the frequency people attend religious services and their support for public funding for space exploration?*
+
+###Why I find this Interesting
+
+Have you kept up on [SpaceX](http://www.spacex.com/)?  SpaceX designs, manufactures and launches advanced rockets and spacecraft. The company was founded in 2002 to revolutionize space technology, with the ultimate goal of enabling people to live on other planets.
+
+SpaceX's Falcon 9 made history in 2012 when it delivered Dragon into the correct orbit for rendezvous with the International Space Station, making SpaceX the first commercial company ever to visit the station. Since then SpaceX has made multiple flights to the space station, both delivering and returning cargo for NASA. (Dragon is a spacecraft developed by SpaceX launched into space by the SpaceX Falcon 9 two-stage-to-orbit launch vehicle. SpaceX is developing a crewed version called the Dragon V2.)
+
+Most impressively, on April 8, 2016, SpaceX lifted off delivering supplies to the International Space Station.  Before reaching the Space Station, the first stage of the rocket successfully landed on a drone ship that was stationed off the Florida coast. [Watch it] (https://www.youtube.com/watch?v=7pUAydjne5M)
+
+It is my interest and excitement on the advances that SpaceX has demonstrated that led me to the analysis presented in this document.
+
+###Conditions Check
+####Chi-Square Independence Test
+This data is composed of two categorical variables one of which has more than two levels.  The appropriate statistical test for data like this is the Chi-Square Independence Test. A chi-square test for independence is applied when you have two categorical variables from a single population. It is used to determine whether there is a significant association (not causal) between the two variables.  This is the only statistical test for the GSS Data that is appropriate for this analysis.
+
+####Conditions of the Chi-Square Independence Test.
+
+1. **Independence**: Sampled observations must be independent:
+   + Random sample/assignment - This data is random based on the description of the data collection methods in the GSS FAQ.  While there are potential source of bias in GSS, it is generally accepted that GSS satisfies this random sample requirement.  *"..the GSS tries to follow the highest survey standards in design, sampling, interviewing, processing, and documentation. Items are designed by leading specialists in their field and then pretested, full-probability sampling is used, a high response rate is obtained, and many data quality checks from validation to verification are employed."*.  [Link](http://www.ssric.org/trd/other/ssda/gssdesc) 
+   + While the GSS data is assumed to be random, the potential sources of bias are:
+       + “Face-to-face interviews” performed at the University of Chicago introduce a “convenience bias” as people close to Chicago may be more likely to participate. 
+       + The study may suffer from “voluntary response bias” since people with strong responses participate.  The voluntary participants may not be representative of the US population. 
+   + If sampling without replacement, n<10% of population - The number of cases is less than ten percent of the population of the US ([323,987,000](http://www.worldometers.info/world-population/us-population/)).
+   + Each case only contributes to one cell in the table (the data is not paired).  There is no evidence that suggests a violation of this rule.
+2. **Sample size**: Each cell must have at least 5 expected cases - A table below demonstrates that each cell has many more than 5 cases.
+
+## Part 3: Exploratory data analysis
+Before proceeding, let us first look and understand the data. We'll then clean and filter it before beginning an analysis.
+
+###Data Preparation
+
+The first step is to load the data set and the R packages we will use to support the statistical analysis.
+
+```{r load-packages, message = FALSE, warning=FALSE}
+library(ggplot2)
+library(plyr)#Used for the revalue function
+library(dplyr)
+library(RColorBrewer)
+library(statsr)
+### Load data
+#load("./Inferential/project/gss.Rdata")
+load("gss.Rdata")
+```
+
+First will will filter the GSS data to contain only the variables of interest.  In addition to the *attend* and *natspac* variables, I am also going to include the *year* variable so I can filter the data to include only newer data.  I posit that attitudes and position vary greatly between 1972 and 2012!
+
+Here is a brief summary of the data before too many changes are made:
+```{r dataPrep}
+#Prepare data
+varsOfInterest <- c("year", "attend", "natspac")
+modData <- select(gss, one_of(varsOfInterest))#57061 records
+summary(modData)
+```
+I am going to limit the analysis to surveys no older that the year 2000.  It is the author's belief that public opinion changes over long periods of time.  I am interested in what people think today, not decades ago.  After the code runs, the summary is re-displayed to ensure the operation was successful.
+```{r filterYear}
+modData <- modData %>% filter(year>1999)
+summary(modData)
+```
+I no longer require the *year* variable so I will remove it and then take a look at missing data.
+```{r}
+modData$year <- NULL
+countNAs <- apply(modData, 2, function(x) sum(is.na(x)))
+countNAs
+```
+There are quite of few records with missing data.  Let us clean that up so we have complete records.
+```{r removeNA}
+modData <- modData %>% filter(attend != "NA", natspac != "NA")# records
+dim(modData)
+summary(modData)
+```
+Now that the data has been prepared, we see that we are left with 6,330 records.
+
+####Factor Management
+
+Let us inspect the factors in the working data set.
+```{r factorMgmt}
+table(modData)
+```
+Note the factor *Never* has no records.  Let us remove this.
+```{r removeFactor}
+#to drop factor see http://www.r-bloggers.com/r-drop-factor-levels-in-a-dataset/
+modData$attend <- modData$attend[modData$attend !="Never"]
+modData$attend <- factor(modData$attend)
+table(modData)
+```
+That looks better.
+
+We collected, filtered and clean our working data set.  Let us now explore it a bit more to make sure we are ready for analysis.
+```{r dataPlots1}
+ggplot(modData, aes(x=attend, fill=factor(attend))) + geom_bar() + theme(axis.text.x=element_blank(), axis.ticks=element_blank()) +
+     ggtitle("Frequency of Attendance\nat Religious Services")
+```
+
+Appears there is some consistency across the *attend* factors with a bump in the count of people that go to religious services each week.
+```{r dataPlots2}
+ggplot(modData, aes(x=natspac, fill=factor(natspac))) + geom_bar() + theme(axis.text.x=element_blank(), axis.ticks=element_blank()) +
+     ggtitle("Public Support for\nSpace Exploration")
+```
+
+Most survey participants appear to think spending on space exploration is about right with the balance favoring the option that we are spending too much.
+
+To simplify - and make the analysis more meaningful, let's collapse the attend factors into just a couple of factors.  We'll create two *attend* factors from the many we have.  The division point with be 1 religious service/month.  If less than once a month, the survey count will be aggregated into the new *Rarely* factor.  If more frequent, then the survey counts will be aggregated into the *Frequently* factor.
+
+```{r reduceFactorCnt1}
+modData$attend <- revalue(modData$attend, c("Lt Once A Year"="Rarely", "Once A Year"="Rarely", "Sevrl Times A Yr"="Rarely"))
+modData$attend <- revalue(modData$attend, c("Once A Month"="Frequently", "2-3X A Month"="Frequently", "Nrly Every Week"="Frequently", 
+     "Every Week"="Frequently", "More Thn Once Wk"="Frequently"))
+ggplot(modData, aes(x=attend, fill=factor(attend))) + geom_bar() + theme(axis.text.x=element_blank(), axis.ticks=element_blank()) +
+     ggtitle("Frequency of Attendance\nat Religious Services")
+```
+
+We now know that more people attend religious services compared to those that attend less frequently.
+```{r reduceFactorCnt2}
+plot(modData$attend, modData$natspac, col=brewer.pal(3, "Accent"), xlab="Religious Services Frequency", ylab="Support of Space Exploration")
+```
+
+From this plot it appears  there is a consistent consensus on space exploration spending regardless of religious service attendance.  Let's find out if what appears to be independent really is independent!
+
+## Part 4: Inference
+###Hypothesis Tests
+For this hypothesis, there are two categorical variables - *attend* with 2 levels and *natspac* with 3 levels.  The Chi-Square Independence Test will be used to test the hypothesis modeled after our question described previously:
+
+$H_{0}$: Opinions on government spending for space exploration and the frequency of attending religious services are independent. 
+
+$H_{A}$ Opinions on government spending for space exploration and the frequency of attending religious services are dependent. 
+
+The analysis  quantifies how different the observed counts are from the expected counts.  Large deviations from what would be expected based on chance alone would provide strong evidence in support of the alternative hypothesis ($H_{A}$).
+
+###Chi-Square Test Independence Test 
+
+The test statistics is calculated as
+\[ \chi^2 = \sum_{i=1}^k{(O_i - E_i)^2 / E_i}\] 
+
+where: 
+`df = (R-1) * (C-1)`
+`O: observed`
+`E: expected`
+`k: number of cells`
+`R: number of rows`
+`C: number of columns`
+
+Thankfully, R provides the tools to solve this quickly and easily. Before taking too many shortcuts, let us collect the data R will use to perform the chi-square test calculation.
+
+To get started, we will add row and column totals to the data set table view:
+
+```{r beginAnalysis1}
+tmpTable <- addmargins(table(modData))
+tmpTable
+```
+
+We now prepare a table that provides the observed and expected counts:
+```{r tableCalc}
+#Overall frequent attendance rate in the sample
+overall_frq <- tmpTable[2,4]/tmpTable[3,4]
+overall_rare <- tmpTable[1,4]/tmpTable[3,4]
+#calculate expected
+rare_little <- round(tmpTable[3,1] * overall_rare)
+rare_right <- round(tmpTable[3,2] * overall_rare)
+rare_much <- round(tmpTable[3,3] * overall_rare)
+
+rare_total <- rare_little + rare_right + rare_much
+
+frq_little <- round(tmpTable[3,1] * overall_frq)
+frq_right <- round(tmpTable[3,2] * overall_frq)
+frq_much <- round(tmpTable[3,3] * overall_frq)
+
+frq_total <- frq_little + frq_right + frq_much
+```
+
+If in fact religious service attendance and support for space are independent (i.e. if $H_{0}$ is true), how many of the persons supporting space exploration would we expect to frequently attend religious services? (Note:  The expected values are shown in <span style="color:blue">blue</span>.)
+
+| ---------- | Too Little | About Right | Too Much | Total |
+| ---------- | ---------- | ----------- | -------- | ----- |
+| Rarely | 448 (<span style="color:blue">373</span>) | 1209 (<span style="color:blue">1208</span>) | 963 (<span style="color:blue">1039</span>) | 2620 |
+| Frequently | 453 (<span style="color:blue">528</span>) | 1710 (<span style="color:blue">1711</span>) | 1547 (<span style="color:blue">1471</span>) | 3710 |
+| Total | 901 | 2919 | 2510 | 6330 |
+
+We could calculate this by hand using the equation provided previously but that would be laborious compared to the simplicity provided by R and the chisq.test used below.
+
+```{r chi_sqTest}
+rarely <- c(1591, 4358, 4671)
+frequently <- c(1486, 6248, 7700)
+religion_space <- as.data.frame(rbind(rarely, frequently))
+names(religion_space) <- c("Too Little", "About Right", "Too Much")
+chisq.test(religion_space)
+```
+
+####Results
+
+Based on the calculations above, this data has a chi-square statistic of 199.35, degrees of freedom of 2 and a p-value of 2.2e-16.  Since this p-value is much smaller than our significance level (.05) we reject the null hypothesis in favor of the alternative hypothesis.
+
+### Conclusion:
+
+By rejecting the null hypothesis $H_{0}$, test results provides strong evidence suggesting that the frequency of religious services and support for space exploration are dependent or have some association. Because this analysis is based on observational survey data and is not an experiment, no *causality* inferences to the general population can be made. 
+
+Lastly, the statistical approach and the selection of the Chi-Square Test for Independence is appropriate because the sampling method was simple random sampling, the variables under study were categorical and the expected frequency count was at least 5 in each cell of the contingency table.
+
+####Next Steps:
+It would be interesting to take this analysis further and determine if rejecting the null hypothesis $H_{0}$ would be supported using older survey data.  This would provide an indication if religious service attendance and support for space exploration has changed by decades and generations.
+
+##References
+
+- [Duke University General Social Survey (GSS), Cumulative Dataset](http://guides.library.duke.edu/c.php?g=289704&p=1930833)
+
+- [GSS FAQ](http://www3.norc.org/GSS/Templates/BaseTemplate.aspx?NRMODE=Published&NRNODEGUID=%7B2E75FB22-4D36-474F-AA28-97D9A2C04B6C%7D&NRORIGINALURL=%2FGSS%2BWebsite%2FFAQs%2F&NRCACHEHINT=NoModifyGuest#6) 
+
+- [Codebook for GSS Extract](https://d396qusza40orc.cloudfront.net/statistics%2Fproject%2Fgss1.html)
+

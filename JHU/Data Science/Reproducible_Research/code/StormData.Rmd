@@ -1,0 +1,156 @@
+![](F:\Skydrive\Certification\Data Science Specialization\R_Working_Dir\Class5Assign2\jhu.png)Storm Data Analysis: Deaths & Costs 
+================================================
+
+>Author:  Cliff Weaver  
+>Coursera Reproducible Reseach by Johns Hopkins   
+>Date:  `r format(Sys.Date(), "%B %d, %Y")`
+
+#Synopsis
+Many severe waether events can result in fatalities, injuries, and property damage.  Using data from the National Oceanic and Atmospheric Administration (NOAA), this research suggests that tornadoes have caused more harm that other types of weather events.  Floods have caused more economic damage than other weather events. 
+
+#Introduction
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+Storm Data is an official publication of the National Oceanic and Atmospheric Administration (NOAA) which documents:  
+
+a. The occurrence of storms and other significant weather phenomena having sufficient intensity to cause loss of life, injuries, significant property damage, and/or disruption to commerce; 
+
+b. Rare, unusual, weather phenomena that generate media attention, such as snow flurries in South Florida or the San Diego coastal area; and  
+c. Other significant meteorological events, such as record maximum or minimum temperatures or precipitation that occur in connection with another event.   
+
+#Data Processing
+The data for this assignment can be downloaded from Activity monitoring data [48MB][http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2]
+
+NOTE:  This data was downloaded for this exercise on August 16, 2015.
+
+There are 37 variables included in this dataset.  Only a subset of the variables is used for this analysis.  A total of 903,297 records
+are in the dataset.
+
+To tidy the data and prepare it for analsysis, we need to load a few libraries:
+```{r loadLibraries, message=FALSE}
+library(Hmisc)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+```
+
+```{r dataload, eval=FALSE}
+if (!file.exists("../Class5Assign2/data/workingData.csv")) 
+     {
+     download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2",
+                   destfile="../Class5Assign2/data/rawData.csv.bz2")
+     file = bzfile('../Class5Assign2/data/rawData.csv.bz2')
+     rawData <- read.csv(file)
+     #Let's preserve the raw data and creat a working copy of the dataset
+     workingData <- rawData %>% select(BGN_DATE, EVTYPE, FATALITIES, INJURIES,PROPDMG,PROPDMGEXP, CROPDMG, CROPDMGEXP)
+     #Let's save a copy of the working data
+     write.csv(workingData, "../Class5Assign2/data/workingData.csv")
+}
+```
+```{r loadworkingData}
+#If the workingData.csv exists, let's open it for analysis:
+workingData <- read.csv("../data/workingData.csv", na.strings=c('?', "", "-"), stringsAsFactors = FALSE)
+```
+Because weather reporting early in the dataset was sporatic, we are going to evalaute wehtehr events later than 1995:
+```{r}
+workingData$BGN_DATE <- mdy_hms(workingData$BGN_DATE)
+workingData <- workingData %>% filter(year(BGN_DATE) > 1995)
+# convert to local data frame. Printing only shows 10 rows and as many columns as can fit on your screen
+workingData <- tbl_df(workingData)
+```
+Let's take a look at the data:
+```{r}
+glimpse(workingData)
+```
+The format of the data is not consistent.  Here are a few examples:
+```{r uniqueData1}
+unique(workingData$PROPDMGEXP)
+unique(workingData$CROPDMGEXP)
+```
+This needs to be corrected.  Also we need to make the event type (EVTYPE) a factor:
+```{r formatData}
+workingData$EVTYPE <- as.factor(workingData$EVTYPE)
+workingData$PROPDMGEXP <- toupper(workingData$PROPDMGEXP)
+workingData$PROPDMGEXP[workingData$PROPDMGEXP == ""] <- "0"
+workingData$CROPDMGEXP <- toupper(workingData$CROPDMGEXP)
+workingData$CROPDMGEXP[workingData$CROPDMGEXP == ""] <- "0"
+```
+Let's amke sure our data manipulation is correct:
+```{r uniqueData2}
+unique(workingData$PROPDMGEXP)
+unique(workingData$CROPDMGEXP)
+```
+The dataset contains letters like K, M, and B representing the values of 1,000, 1,000,000 and 1,000,000,000, respectively.  
+Let's sway the letters for numbers so we have numerical data to evalaute.  We need to perform this on property and crop  
+damge fields.  We'll then multiply the numer of events for each level of damage.
+```{r makeNumeric, warning=FALSE}
+#Property damage
+workingData$PROPDMGEXP <- gsub('K', '1000', workingData$PROPDMGEXP)
+workingData$PROPDMGEXP <- gsub('M', '1000000', workingData$PROPDMGEXP)
+workingData$PROPDMGEXP <- gsub('M', '1000000000', workingData$PROPDMGEXP)
+workingData$PROPDMGEXP <- as.numeric(workingData$PROPDMGEXP, na.rm=TRUE)
+#Multiply the PROPDMG values with their respective PROPDMGEXP values
+workingData$PROPDMG <- workingData$PROPDMG * workingData$PROPDMGEXP
+
+#Crop Damage
+workingData$CROPDMGEXP <- gsub('K', '1000', workingData$CROPDMGEXP)
+workingData$CROPDMGEXP <- gsub('M', '1000000', workingData$CROPDMGEXP)
+workingData$CROPDMGEXP <- gsub('B', '1000000000', workingData$CROPDMGEXP)
+workingData$CROPDMGEXP <- as.numeric(workingData$CROPDMGEXP)
+#Multiply the CPROPDMG values with their respective CPROPDMGEXP values
+workingData$CROPDMG <- workingData$CROPDMG * workingData$CROPDMGEXP
+glimpse(workingData)
+```
+The data is looking pretty good but it needs to be grouped and summarized.  Using the dplyr package, we manipulate the working dataset:
+```{r dplyr1}
+totals <- workingData %>%  
+     group_by(EVTYPE) %>%  
+     summarise(FATALITIES = sum(FATALITIES), INJURIES = sum(INJURIES),PROPDMG = sum(PROPDMG, na.rm = TRUE),  
+               CROPDMG = sum(CROPDMG, na.rm = TRUE)) %>%  
+     mutate(totalDeathInjury=FATALITIES + INJURIES, totalDollarLost= PROPDMG + CROPDMG)  
+glimpse(totals)
+```
+We now have the data needed to evalaute the 2 questions posed in this exercise:
+
+1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+2. Across the United States, which types of events have the greatest economic consequences?
+
+#Results
+
+###Question 1: Across the United States, which types of events are most harmful with respect to population health?
+
+```{r plot1}
+totalsPlot1 <- totals[order(-totals$totalDeathInjury)[1:10],]
+
+ggplot(totalsPlot1, aes(x = reorder(EVTYPE, -totalDeathInjury), y = totalDeathInjury)) +
+     geom_bar(stat = "identity", fill = "lightblue") +
+     theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+     xlab(NULL) + ylab("Damage in Death and Injury") +
+     ggtitle(paste("Death and Injury: Weather Events"))  
+```
+
+
+For the purposes of this analysis, harm is defined as the sum of deaths and injuries.  As the plot above illustrates, tornadoes have caused more harm that other types of weather events.
+
+###Question 2: Across the United States, which types of events have the greatest economic consequences?
+
+```{r plot2}
+totalsPlot2 <- totals[order(-totals$totalDollarLost)[1:10], ]
+
+ggplot(totalsPlot2, aes(x = reorder(EVTYPE, -totalDollarLost), y = totalDollarLost/1000000000)) +
+     geom_bar(stat = "identity", fill = "lightblue") +
+     theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+     xlab(NULL) + ylab("Damage in $ - Billions") +
+     ggtitle(paste("Largest Economic Losses: Weather"))  
+```
+
+
+Floods have caused more economic damage than other weather events.
+
+#Session Information
+```{r sessionInfo}
+sessionInfo()
+```

@@ -1,0 +1,309 @@
+---
+title: "Basic Probability Distributions"
+output:
+  html_document:
+    highlight: pygments
+    theme: spacelab
+    toc: yes
+header-includes: \usepackage{graphicx} \usepackage{mathtools}
+---
+```{r echo=FALSE, message=FALSE}
+if(!require(easypackages)){
+    install.packages("easypackages")
+    library(easypackages)
+}
+packages("dplyr", "reshape2", "boot", "lme4", "pbkrtest", prompt = FALSE)
+```
+
+## Introduction
+
+We look at some of the basic operations associated with probability distributions. There are a large number of probability distributions available, but we only look at a few. If you would like to know what distributions are available you can do a search using the command help.search(“distribution”).
+
+Here we give details about the commands associated with the normal distribution and briefly mention the commands for other distributions. The functions for different distributions are very similar where the differences are noted below.
+
+For every distribution there are four commands. The commands for each distribution are prepended with a letter to indicate the functionality:
+
+- “d” returns the height of the probability density function 
+- “p” returns the cumulative density function 
+- “q” returns the inverse cumulative density function (quantiles) 
+- “r” returns randomly generated numbers 
+
+## The Normal Distribution
+
+There are four functions that can be used to generate the values associated with the normal distribution. 
+
+### dnorm
+
+The first function we look at it is `dnorm`. Given a set of values it returns the height of the probability distribution at each point. If you only give the points it assumes you want to use a mean of zero and standard deviation of one. There are options to use different values for the mean and standard deviation, though:
+
+```{r}
+dnorm(0)
+dnorm(0) * sqrt(2 * pi)
+dnorm(0, mean = 4)
+dnorm(0, mean = 4, sd = 10)
+
+v <- c(0, 1, 2)
+dnorm(v)
+x <- seq(-20, 20, by = .1)
+y <- dnorm(x)
+plot(x, y)
+y <- dnorm(x, mean = 2.5, sd = 0.1)
+plot(x, y)
+```
+
+### pnorm
+
+The second function we examine is `pnorm`. Given a number or a list it computes the probability that a normally distributed random number will be less than that number. This function also goes by the rather ominous title of the “Cumulative Distribution Function.” It accepts the same options as dnorm:
+
+```{r}
+pnorm(0)
+pnorm(1)
+pnorm(0, mean = 2)
+pnorm(0, mean = 2, sd = 3)
+
+v <- c(0, 1, 2)
+pnorm(v)
+
+x <- seq(-20, 20, by = .1)
+y <- pnorm(x)
+plot(x,y)
+y <- pnorm(x, mean = 3, sd = 4)
+plot(x,y)
+```
+
+If you wish to find the probability that a number is larger than the given number you can use the lower.tail option:
+
+```{r}
+pnorm(0, lower.tail = FALSE)
+
+pnorm(1, lower.tail = FALSE)
+
+pnorm(0, mean = 2, lower.tail = FALSE)
+```
+
+### qnorm
+
+The next function we look at is `qnorm` which is the inverse of pnorm. The idea behind qnorm is that you give it a probability and it returns the number whose cumulative distribution matches the probability. For example, if you have a normally distributed random variable with mean zero and standard deviation one, then if you give the function a probability it returns the associated Z-score:
+
+```{r}
+qnorm(0.5)
+qnorm(0.5, mean = 1)
+qnorm(0.5, mean = 1, sd = 2)
+qnorm(0.5, mean = 2, sd = 2)
+qnorm(0.5, mean = 2, sd = 4)
+qnorm(0.25, mean = 2, sd = 2)
+
+qnorm(0.333)
+qnorm(0.333, sd = 3)
+qnorm(0.75, mean = 5, sd = 2)
+
+v = c(0.1, 0.3, 0.75)
+qnorm(v)
+
+x <- seq(0, 1, by = .05)
+y <- qnorm(x)
+plot(x, y)
+y <- qnorm(x, mean = 3, sd = 2)
+plot(x, y)
+y <- qnorm(x, mean = 3, sd = 0.1)
+plot(x, y)
+```
+
+### rnorm
+
+The last function we examine is the `rnorm` function which can generate random numbers whose distribution is normal. The argument that you give it is the number of random numbers that you want, and it has optional arguments to specify the mean and standard deviation:
+
+```{r}
+rnorm(4)
+rnorm(4, mean = 3)
+rnorm(4, mean = 3, sd = 3)
+rnorm(4, mean = 3, sd = 3)
+
+y <- rnorm(200)
+hist(y)
+y <- rnorm(200, mean = -2)
+hist(y)
+y <- rnorm(200, mean = -2, sd = 4)
+hist(y)
+qqnorm(y)
+qqline(y)
+```
+
+
+## The t Distribution
+
+There are four functions that can be used to generate the values associated with the t distribution. 
+
+These commands work just like the commands for the normal distribution. One difference is that the commands assume that the values are normalized to mean zero and standard deviation one so you have to use a little algebra to use these functions in practice. The other difference is that you have to specify the number of degrees of freedom. The commands follow the same kind of naming convention, and the names of the commands are dt, pt, qt, and rt.
+
+### dt
+
+A few examples are given below to show how to use the different commands. The first distribution function, dt:
+
+```{r}
+x <- seq(-20, 20, by = .5)
+y <- dt(x, df = 10)
+plot(x, y)
+y <- dt(x, df = 50)
+plot(x, y)
+```
+
+### pt
+
+Next we have the cumulative probability distribution function:
+
+```{r}
+pt(-3, df = 10)
+pt(3, df = 10)
+1 - pt(3, df = 10)
+pt(3, df = 20)
+
+x = c(-3, -4, -2, -1)
+pt((mean(x) - 2)/sd(x), df = 20)
+
+pt((mean(x) - 2)/sd(x), df = 40)
+```
+
+### qt
+
+Next we have the inverse cumulative probability distribution function:
+
+```{r}
+qt(0.05, df = 10)
+qt(0.95, df = 10)
+qt(0.05, df = 20)
+qt(0.95, df =20)
+
+v <- c(0.005, .025, .05)
+qt(v, df = 253)
+
+qt(v, df = 25)
+```
+
+### rt
+
+Finally random numbers can be generated according to the t distribution:
+
+```{r}
+rt(3, df = 10)
+rt(3, df = 20)
+rt(3, df = 20)
+```
+
+## The Binomial Distribution
+
+There are four functions that can be used to generate the values associated with the binomial distribution. 
+
+These commands work just like the commands for the normal distribution. The binomial distribution requires two extra parameters, the number of trials and the probability of success for a single trial. The commands follow the same kind of naming convention, and the names of the commands are dbinom, pbinom, qbinom, and rbinom.
+
+A few examples are given below to show how to use the different commands. 
+
+### dbinom
+
+First we have the distribution function, dbinom:
+
+```{r}
+x <- seq(0, 50, by = 1)
+y <- dbinom(x, 50, 0.2)
+plot(x, y)
+y <- dbinom(x, 50, 0.6)
+plot(x, y)
+x <- seq(0, 100, by = 1)
+y <- dbinom(x, 100, 0.6)
+plot(x, y)
+```
+
+### pbinom
+
+Next we have the cumulative probability distribution function:
+
+```{r}
+pbinom(24, 50, 0.5)
+pbinom(25, 50, 0.5)
+pbinom(25, 51, 0.5)
+pbinom(26, 51, 0.5)
+pbinom(25, 50, 0.5)
+pbinom(25, 50, 0.25)
+pbinom(25, 500, 0.25)
+```
+
+### qbinom
+Next we have the inverse cumulative probability distribution function:
+
+```{r}
+qbinom(0.5, 51, 1/2)
+qbinom(0.25, 51, 1/2)
+qbinom(23, 51, 1/2)
+qbinom(22, 51, 1/2)
+```
+
+### rbinom
+
+Finally random numbers can be generated according to the binomial distribution:
+
+```{r}
+rbinom(5, 100, .2)
+rbinom(5, 100, .7)
+```
+
+## The Chi-Squared Distribution
+
+There are four functions that can be used to generate the values associated with the Chi-Squared distribution. 
+
+These commands work just like the commands for the normal distribution. The first difference is that it is assumed that you have normalized the value so no mean can be specified. The other difference is that you have to specify the number of degrees of freedom. The commands follow the same kind of naming convention and the names of the commands are dchisq, pchisq, qchisq, and rchisq.
+
+A few examples are given below to show how to use the different commands. 
+
+### dchisq
+
+First we have the distribution function, dchisq:
+
+```{r}
+x <- seq(-20, 20, by = .5)
+y <- dchisq(x, df = 10)
+plot(x, y)
+y <- dchisq(x, df = 12)
+plot(x, y)
+```
+
+### pchisq
+
+Next we have the cumulative probability distribution function:
+
+```{r}
+pchisq(2, df = 10)
+pchisq(3, df = 10)
+
+1 - pchisq(3, df = 10)
+
+pchisq(3, df = 20)
+
+x = c(2, 4, 5, 6)
+pchisq(x, df = 20)
+```
+
+### qchisq
+
+Next we have the inverse cumulative probability distribution function:
+
+```{r}
+qchisq(0.05, df = 10)
+qchisq(0.95, df = 10)
+qchisq(0.05, df = 20)
+qchisq(0.95, df = 20)
+
+v <- c(0.005, .025, .05)
+qchisq(v, df = 253)
+qchisq(v, df = 25)
+```
+
+### rchisq
+
+Finally random numbers can be generated according to the Chi-Squared distribution:
+
+```{r}
+rchisq(3, df = 10)
+rchisq(3, df = 20)
+```
+
+This was originally published here:  See http://www.cyclismo.org/tutorial/R/probability.html.  I made a few modifications/

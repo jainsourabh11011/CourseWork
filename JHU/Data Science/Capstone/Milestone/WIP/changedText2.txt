@@ -1,0 +1,118 @@
+orig
+
+ [1] "they've decided its more fun if I don't."                                                                                                   
+ [2] "So Tired D; Played Lazer Tag & Ran A LOT D; Ughh Going To Sleep Like In 5 Minutes ;)"                                                       
+ [3] "Words from a complete stranger! Made my birthday even better :)"                                                                            
+ [4] "RT : According to the National Retail Federation $16.3 BILLION was spent on #MothersDay last year!!"                                        
+ [5] "Athletes/celebrities should have a tool to charge $.99 per RT request. $ to support foundations/charities, fans get involved."              
+ [6] "I'm taking Adam! :-)"                                                                                                                       
+ [7] "#Inspiring RT : Great minds must be ready not only to take opportunities, but to make them. --Colton"                                       
+ [8] "med school...wow! I could never do that. Am too OCD to be around blood and sick people for long periods of time ;)"                         
+ [9] "“: yeah, l could be the bigger person, or you could just shut the fuck up.”"                                                            
+[10] "Join the Maui Mall Shoppers Club at www.mauimall.com. We give away three great prizes monthly, including $100 gift certificate to the mall!"
+[11] "Hey Boston-busy tonight? If not, come check out the lineup@ TT's (central sq) featuring my clients What Time is it Mr. Fox?!"
+
+tolower
+
+ [1] "they've decided its more fun if i don't."                                                                                                   
+ [2] "so tired d; played lazer tag & ran a lot d; ughh going to sleep like in 5 minutes ;)"                                                       
+ [3] "words from a complete stranger! made my birthday even better :)"                                                                            
+ [4] "rt : according to the national retail federation $16.3 billion was spent on #mothersday last year!!"                                        
+ [5] "athletes/celebrities should have a tool to charge $.99 per rt request. $ to support foundations/charities, fans get involved."              
+ [6] "i'm taking adam! :-)"                                                                                                                       
+ [7] "#inspiring rt : great minds must be ready not only to take opportunities, but to make them. --colton"                                       
+ [8] "med school...wow! i could never do that. am too ocd to be around blood and sick people for long periods of time ;)"                         
+ [9] "“: yeah, l could be the bigger person, or you could just shut the fuck up.”"                                                            
+[10] "join the maui mall shoppers club at www.mauimall.com. we give away three great prizes monthly, including $100 gift certificate to the mall!"
+[11] "hey boston-busy tonight? if not, come check out the lineup@ tt's (central sq) featuring my clients what time is it mr. fox?!"
+
+
+rm url
+
+ [1] "they've decided its more fun if I don't."                                                                                     
+ [2] "So Tired D; Played Lazer Tag & Ran A LOT D; Ughh Going To Sleep Like In 5 Minutes ;)"                                         
+ [3] "Words from a complete stranger! Made my birthday even better :)"                                                              
+ [4] "RT : According to the National Retail Federation $16.3 BILLION was spent on #MothersDay last year!!"                          
+ [5] "Athletes/celebrities should have a tool to charge $.99 per RT request. $ to support foundations/charities, fans get involved."
+ [6] "I'm taking Adam! :-)"                                                                                                         
+ [7] "#Inspiring RT : Great minds must be ready not only to take opportunities, but to make them. --Colton"                         
+ [8] "med school...wow! I could never do that. Am too OCD to be around blood and sick people for long periods of time ;)"           
+ [9] "“: yeah, l could be the bigger person, or you could just shut the fuck up.”"                                              
+[10] "Join the Maui Mall Shoppers Club at We give away three great prizes monthly, including $100 gift certificate to the mall!"    
+[11] "Hey Boston-busy tonight? If not, come check out the lineup@ TT's (central sq) featuring my clients What Time is it Mr. Fox?!" 
+
+non words
+
+ [1] "they've decided its more fun if I don't"                                                                             
+ [2] "So Tired D Played Lazer Tag Ran A LOT D Ughh Going To Sleep Like In Minutes"                                         
+ [3] "Words from a complete stranger Made my birthday even better"                                                         
+ [4] "RT According to the National Retail Federation BILLION was spent on MothersDay last year"                            
+ [5] "Athletes celebrities should have a tool to charge per RT request to support foundations charities fans get involved" 
+ [6] "I'm taking Adam"                                                                                                     
+ [7] "Inspiring RT Great minds must be ready not only to take opportunities but to make them Colton"                       
+ [8] "med school wow I could never do that Am too OCD to be around blood and sick people for long periods of time"         
+ [9] "� yeah l could be the bigger person or you could just shut the fuck up �"                                            
+[10] "Join the Maui Mall Shoppers Club at We give away three great prizes monthly including gift certificate to the mall"  
+[11] "Hey Boston busy tonight If not come check out the lineup TT's central sq featuring my clients What Time is it Mr Fox"
+ 
+
+non ascii
+
+ [1] "they've decided its more fun if I don't"                                                                             
+ [2] "So Tired D Played Lazer Tag Ran A LOT D Ughh Going To Sleep Like In Minutes"                                         
+ [3] "Words from a complete stranger Made my birthday even better"                                                         
+ [4] "RT According to the National Retail Federation BILLION was spent on MothersDay last year"                            
+ [5] "Athletes celebrities should have a tool to charge per RT request to support foundations charities fans get involved" 
+ [6] "I'm taking Adam"                                                                                                     
+ [7] "Inspiring RT Great minds must be ready not only to take opportunities but to make them Colton"                       
+ [8] "med school wow I could never do that Am too OCD to be around blood and sick people for long periods of time"         
+ [9] "yeah l could be the bigger person or you could just shut the fuck up"                                                
+[10] "Join the Maui Mall Shoppers Club at We give away three great prizes monthly including gift certificate to the mall"  
+[11] "Hey Boston busy tonight If not come check out the lineup TT's central sq featuring my clients What Time is it Mr Fox"
+
+qdap - contraction
+
+ [1] "They have decided its more fun if I do not"                                                                          
+ [2] "So Tired D Played Lazer Tag Ran A LOT D Ughh Going To Sleep Like In Minutes"                                         
+ [3] "Words from a complete stranger Made my birthday even better"                                                         
+ [4] "RT According to the National Retail Federation BILLION was spent on MothersDay last year"                            
+ [5] "Athletes celebrities should have a tool to charge per RT request to support foundations charities fans get involved" 
+ [6] "I am taking Adam"                                                                                                    
+ [7] "Inspiring RT Great minds must be ready not only to take opportunities but to make them Colton"                       
+ [8] "Med school wow I could never do that Am too OCD to be around blood and sick people for long periods of time"         
+ [9] "Yeah l could be the bigger person or you could just shut the fuck up"                                                
+[10] "Join the Maui Mall Shoppers Club at We give away three great prizes monthly including gift certificate to the mall"  
+[11] "Hey Boston busy tonight If not come check out the lineup TT's central sq featuring my clients What Time is it Mr Fox"
+
+
+From http://trinker.github.io/qdap/vignettes/qdap_vignette.html#clean
+
+> data("abbreviations")
+> abbreviations
+      abv     rep
+1     Mr.  Mister
+2    Mrs.  Misses
+3     Ms.    Miss
+4    .com dot com
+5    www. www dot
+6    i.e.      ie
+7    A.D.      AD
+8    B.C.      BC
+9    A.M.      AM
+10   P.M.      PM
+11 et al.   et al
+12    Jr.  Junior
+13    Dr.  Doctor
+14    Sr.  Senior
+
+
+stopwords
+
+data(BuckleySaltonSWL)
+
+data(emoticon)
+
+data(Top100Words)
+data(Top200Words)
+
+

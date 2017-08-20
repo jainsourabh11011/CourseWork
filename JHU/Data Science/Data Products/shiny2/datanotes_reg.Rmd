@@ -1,0 +1,35 @@
+---
+title: "U.S. Census App"
+---
+
+## Welcome to my Shiny Application
+
+This application is prepared to satisfy the project requirements for the Coursera Course [*Developing Data Products*](https://www.coursera.org/learn/data-products/) provided by Johns Hopkins University.  Developing Data Products is course 9 of 10 in the Data Science Specialization.
+
+### The requirements for the project are:
+
+1. Write a shiny application with associated supporting documentation. The documentation should be thought of as whatever a user will need to get started using your application.
+2. Deploy the application on Rstudio's shiny server
+3. Share the application link by pasting it into the provided text box
+4. Share your server.R and ui.R code on github
+
+### The application must include the following:
+
+1. Some form of input (widget: textbox, radio button, checkbox, ...)
+2. Some operation on the ui input in sever.R
+3. Some reactive output displayed as a result of server calculations
+4. You must also include enough documentation so that a novice user could use your application.
+5. The documentation should be at the Shiny website itself. Do not post to an external link.
+
+## How to Use
+
+This Shiny Application is easy to use:
+
+* On the left hand side, select the data of interest
+    + The Census Regions data includes larger regions: Northeast, Midwest, South and West
+    + The Census Divisions data provides data in more detail like Mid-Atlantic and Mountain
+* Select the Census Year you want to explore
+* Once your selections are made, a **Data Table** is presented (this is the default tab view) 
+    + You can also see a plot of of the data by clicking on the **Census Plot** Tab
+    + Since you are reading this, you have already gotten to the **How To** tab
+

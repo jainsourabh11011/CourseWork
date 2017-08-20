@@ -1,0 +1,689 @@
+---
+title: "Xgboost"
+output: html_document
+---
+
+A good article - [Benchmarking Random Forest Implementations](http://www.r-bloggers.com/benchmarking-random-forest-implementations/)
+
+#Part 1:XGBoost R Tutorial
+
+## Introduction
+
+**Xgboost** is short for e**X**treme **G**radient **Boost**ing package.
+
+The purpose of this Vignette is to show you how to use **Xgboost** to build a model and make predictions.
+
+It is an efficient and scalable implementation of gradient boosting framework by @friedman2000additive and @friedman2001greedy. Two solvers are included:
+
+- *linear* model ;
+- *tree learning* algorithm.
+
+It supports various objective functions, including *regression*, *classification* and *ranking*. The package is made to be extendible, so that users are also allowed to define their own objective functions easily.
+
+It has been [used](https://github.com/dmlc/xgboost) to win several [Kaggle](http://www.kaggle.com) competitions.
+
+It has several features:
+
+* Speed: it can automatically do parallel computation on *Windows* and *Linux*, with *OpenMP*. It is generally over 10 times faster than the classical `gbm`.
+* Input Type: it takes several types of input data:
+    * *Dense* Matrix: *R*'s *dense* matrix, i.e. `matrix` ;
+    * *Sparse* Matrix: *R*'s *sparse* matrix, i.e. `Matrix::dgCMatrix` ;
+    * Data File: local data files ;
+    * `xgb.DMatrix`: its own class (recommended).
+* Sparsity: it accepts *sparse* input for both *tree booster*  and *linear booster*, and is optimized for *sparse* input ;
+* Customization: it supports customized objective functions and evaluation functions.
+
+## Installation
+
+### Github version
+
+For weekly updated version (highly recommended), install from *Github*:
+
+```{r installGithub, eval=FALSE}
+install.packages("drat", repos="https://cran.rstudio.com")
+drat:::addRepo("dmlc")
+install.packages("xgboost", repos="http://dmlc.ml/drat/", type = "source")
+```
+
+> *Windows* user will need to install [Rtools](http://cran.r-project.org/bin/windows/Rtools/) first.
+
+### CRAN version
+
+
+The version 0.4-2 is on CRAN, and you can install it by:
+
+```{r, eval=FALSE}
+install.packages("xgboost")
+```
+
+Formerly available versions can be obtained from the CRAN [archive](http://cran.r-project.org/src/contrib/Archive/xgboost)
+
+## Learning
+
+For the purpose of this tutorial we will load **XGBoost** package.
+
+```{r libLoading, results='hold', message=F, warning=F}
+require(xgboost)
+```
+
+### Dataset presentation
+
+In this example, we are aiming to predict whether a mushroom can be eaten or not (like in many tutorials, example data are the the same as you will use on in your every day life :-).
+
+Mushroom data is cited from UCI Machine Learning Repository. @Bache+Lichman:2013.
+
+### Dataset loading
+
+We will load the `agaricus` datasets embedded with the package and will link them to variables.
+
+The datasets are already split in:
+
+* `train`: will be used to build the model ;
+* `test`: will be used to assess the quality of our model.
+
+Why *split* the dataset in two parts?
+
+In the first part we will build our model. In the second part we will want to test it and assess its quality. Without dividing the dataset we would test the model on the data which the algorithm have already seen.
+
+```{r datasetLoading, results='hold', message=F, warning=F}
+data(agaricus.train, package='xgboost')
+data(agaricus.test, package='xgboost')
+train <- agaricus.train
+test <- agaricus.test
+```
+
+> In the real world, it would be up to you to make this division between `train` and `test` data. The way to do it is out of the purpose of this article, however `caret` package may [help](http://topepo.github.io/caret/splitting.html).
+
+Each variable is a `list` containing two things, `label` and `data`:
+
+```{r dataList, message=F, warning=F}
+str(train)
+```
+
+`label` is the outcome of our dataset meaning it is the binary *classification* we will try to predict.
+
+Let's discover the dimensionality of our datasets.
+
+```{r dataSize, message=F, warning=F}
+dim(train$data)
+dim(test$data)
+```
+
+This dataset is very small to not make the **R** package too heavy, however **XGBoost** is built to manage huge dataset very efficiently.
+
+As seen below, the `data` are stored in a `dgCMatrix` which is a *sparse* matrix and `label` vector is a `numeric` vector (`{0,1}`):
+
+```{r dataClass, message=F, warning=F}
+class(train$data)[1]
+class(train$label)
+```
+
+### Basic Training using XGBoost
+
+This step is the most critical part of the process for the quality of our model.
+
+#### Basic training
+
+We are using the `train` data. As explained above, both `data` and `label` are stored in a `list`.
+
+In a *sparse* matrix, cells containing `0` are not stored in memory. Therefore, in a dataset mainly made of `0`, memory size is reduced. It is very usual to have such dataset.
+
+We will train decision tree model using the following parameters:
+
+* `objective = "binary:logistic"`: we will train a binary classification model ;
+* `max.deph = 2`: the trees won't be deep, because our case is very simple ;
+* `nthread = 2`: the number of cpu threads we are going to use;
+* `nround = 2`: there will be two passes on the data, the second one will enhance the model by further reducing the difference between ground truth and prediction.
+
+```{r trainingSparse, message=F, warning=F}
+bstSparse <- xgboost(data = train$data, label = train$label, max.depth = 2, eta = 1, nthread = 2, nround = 2, objective = "binary:logistic")
+```
+
+> More complex the relationship between your features and your `label` is, more passes you need.
+
+#### Parameter variations
+
+##### Dense matrix
+
+Alternatively, you can put your dataset in a *dense* matrix, i.e. a basic **R** matrix.
+
+```{r trainingDense, message=F, warning=F}
+bstDense <- xgboost(data = as.matrix(train$data), label = train$label, max.depth = 2, eta = 1, nthread = 2, nround = 2, objective = "binary:logistic")
+```
+
+##### xgb.DMatrix
+
+**XGBoost** offers a way to group them in a `xgb.DMatrix`. You can even add other meta data in it. It will be useful for the most advanced features we will discover later.
+
+```{r trainingDmatrix, message=F, warning=F}
+dtrain <- xgb.DMatrix(data = train$data, label = train$label)
+bstDMatrix <- xgboost(data = dtrain, max.depth = 2, eta = 1, nthread = 2, nround = 2, objective = "binary:logistic")
+```
+
+##### Verbose option
+
+**XGBoost** has several features to help you to view how the learning progress internally. The purpose is to help you to set the best parameters, which is the key of your model quality.
+
+One of the simplest way to see the training progress is to set the `verbose` option (see below for more advanced technics).
+
+```{r trainingVerbose0, message=T, warning=F}
+# verbose = 0, no message
+bst <- xgboost(data = dtrain, max.depth = 2, eta = 1, nthread = 2, nround = 2, objective = "binary:logistic", verbose = 0)
+```
+
+```{r trainingVerbose1, message=T, warning=F}
+# verbose = 1, print evaluation metric
+bst <- xgboost(data = dtrain, max.depth = 2, eta = 1, nthread = 2, nround = 2, objective = "binary:logistic", verbose = 1)
+```
+
+```{r trainingVerbose2, message=T, warning=F}
+# verbose = 2, also print information about tree
+bst <- xgboost(data = dtrain, max.depth = 2, eta = 1, nthread = 2, nround = 2, objective = "binary:logistic", verbose = 2)
+```
+
+## Basic prediction using XGBoost
+
+## Perform the prediction
+
+The purpose of the model we have built is to classify new data. As explained before, we will use the `test` dataset for this step.
+
+```{r predicting, message=F, warning=F}
+pred <- predict(bst, test$data)
+
+# size of the prediction vector
+print(length(pred))
+
+# limit display of predictions to the first 10
+print(head(pred))
+```
+
+These numbers doesn't look like *binary classification* `{0,1}`. We need to perform a simple transformation before being able to use these results.
+
+## Transform the regression in a binary classification
+
+The only thing that **XGBoost** does is a *regression*. **XGBoost** is using `label` vector to build its *regression* model.
+
+How can we use a *regression* model to perform a binary classification?
+
+If we think about the meaning of a regression applied to our data, the numbers we get are probabilities that a datum will be classified as `1`. Therefore, we will set the rule that if this probability for a specific datum is `> 0.5` then the observation is classified as `1` (or `0` otherwise).
+
+```{r predictingTest, message=F, warning=F}
+prediction <- as.numeric(pred > 0.5)
+print(head(prediction))
+```
+
+## Measuring model performance
+
+To measure the model performance, we will compute a simple metric, the *average error*.
+
+```{r predictingAverageError, message=F, warning=F}
+err <- mean(as.numeric(pred > 0.5) != test$label)
+print(paste("test-error=", err))
+```
+
+> Note that the algorithm has not seen the `test` data during the model construction.
+
+Steps explanation:
+
+1. `as.numeric(pred > 0.5)` applies our rule that when the probability (<=> regression <=> prediction) is `> 0.5` the observation is classified as `1` and `0` otherwise ;
+2. `probabilityVectorPreviouslyComputed != test$label` computes the vector of error between true data and computed probabilities ;
+3. `mean(vectorOfErrors)` computes the *average error* itself.
+
+The most important thing to remember is that **to do a classification, you just do a regression to the** `label` **and then apply a threshold**.
+
+*Multiclass* classification works in a similar way.
+
+This metric is **`r round(err, 2)`** and is pretty low: our yummly mushroom model works well!
+
+## Advanced features
+
+Most of the features below have been implemented to help you to improve your model by offering a better understanding of its content.
+
+### Dataset preparation
+
+For the following advanced features, we need to put data in `xgb.DMatrix` as explained above.
+
+```{r DMatrix, message=F, warning=F}
+dtrain <- xgb.DMatrix(data = train$data, label=train$label)
+dtest <- xgb.DMatrix(data = test$data, label=test$label)
+```
+
+### Measure learning progress with xgb.train
+
+Both `xgboost` (simple) and `xgb.train` (advanced) functions train models.
+
+One of the special feature of `xgb.train` is the capacity to follow the progress of the learning after each round. Because of the way boosting works, there is a time when having too many rounds lead to an overfitting. You can see this feature as a cousin of cross-validation method. The following techniques will help you to avoid overfitting or optimizing the learning time in stopping it as soon as possible.
+
+One way to measure progress in learning of a model is to provide to **XGBoost** a second dataset already classified. Therefore it can learn on the first dataset and test its model on the second one. Some metrics are measured after each round during the learning.
+
+> in some way it is similar to what we have done above with the average error. The main difference is that below it was after building the model, and now it is during the construction that we measure errors.
+
+For the purpose of this example, we use `watchlist` parameter. It is a list of `xgb.DMatrix`, each of them tagged with a name.
+
+```{r watchlist, message=F, warning=F}
+watchlist <- list(train=dtrain, test=dtest)
+
+bst <- xgb.train(data=dtrain, max.depth=2, eta=1, nthread = 2, nround=2, watchlist=watchlist, objective = "binary:logistic")
+```
+
+**XGBoost** has computed at each round the same average error metric than seen above (we set `nround` to 2, that is why we have two lines). Obviously, the `train-error` number is related to the training dataset (the one the algorithm learns from) and the `test-error` number to the test dataset.
+
+Both training and test error related metrics are very similar, and in some way, it makes sense: what we have learned from the training dataset matches the observations from the test dataset.
+
+If with your own dataset you have not such results, you should think about how you divided your dataset in training and test. May be there is something to fix. Again, `caret` package may [help](http://topepo.github.io/caret/splitting.html).
+
+For a better understanding of the learning progression, you may want to have some specific metric or even use multiple evaluation metrics.
+
+```{r watchlist2, message=F, warning=F}
+bst <- xgb.train(data=dtrain, max.depth=2, eta=1, nthread = 2, nround=2, watchlist=watchlist, eval.metric = "error", eval.metric = "logloss", objective = "binary:logistic")
+```
+
+> `eval.metric` allows us to monitor two new metrics for each round, `logloss` and `error`.
+
+### Linear boosting
+
+Until now, all the learnings we have performed were based on boosting trees. **XGBoost** implements a second algorithm, based on linear boosting. The only difference with previous command is `booster = "gblinear"` parameter (and removing `eta` parameter).
+
+```{r linearBoosting, message=F, warning=F}
+bst <- xgb.train(data=dtrain, booster = "gblinear", max.depth=2, nthread = 2, nround=2, watchlist=watchlist, eval.metric = "error", eval.metric = "logloss", objective = "binary:logistic")
+```
+
+In this specific case, *linear boosting* gets sligtly better performance metrics than decision trees based algorithm.
+
+In simple cases, it will happen because there is nothing better than a linear algorithm to catch a linear link. However, decision trees are much better to catch a non linear link between predictors and outcome. Because there is no silver bullet, we advise you to check both algorithms with your own datasets to have an idea of what to use.
+
+### Manipulating xgb.DMatrix
+
+#### Save / Load
+
+Like saving models, `xgb.DMatrix` object (which groups both dataset and outcome) can also be saved using `xgb.DMatrix.save` function.
+
+```{r DMatrixSave, message=F, warning=F}
+xgb.DMatrix.save(dtrain, "dtrain.buffer")
+# to load it in, simply call xgb.DMatrix
+dtrain2 <- xgb.DMatrix("dtrain.buffer")
+bst <- xgb.train(data=dtrain2, max.depth=2, eta=1, nthread = 2, nround=2, watchlist=watchlist, objective = "binary:logistic")
+```
+
+```{r DMatrixDel, include=FALSE}
+file.remove("dtrain.buffer")
+```
+
+#### Information extraction
+
+Information can be extracted from `xgb.DMatrix` using `getinfo` function. Hereafter we will extract `label` data.
+
+```{r getinfo, message=F, warning=F}
+label = getinfo(dtest, "label")
+pred <- predict(bst, dtest)
+err <- as.numeric(sum(as.integer(pred > 0.5) != label))/length(label)
+print(paste("test-error=", err))
+```
+
+### View feature importance/influence from the learnt model
+
+Feature importance is similar to R gbm package's relative influence (rel.inf).
+
+```
+importance_matrix <- xgb.importance(model = bst)
+print(importance_matrix)
+xgb.plot.importance(importance_matrix = importance_matrix)
+```
+#### View the trees from a model
+
+You can dump the tree you learned using `xgb.dump` into a text file.
+
+```{r dump, message=T, warning=F}
+xgb.dump(bst, with.stats = T)
+```
+
+You can plot the trees from your model using ```xgb.plot.tree``
+
+```
+xgb.plot.tree(model = bst)
+```
+
+> if you provide a path to `fname` parameter you can save the trees to your hard drive.
+
+#### Save and load models
+
+Maybe your dataset is big, and it takes time to train a model on it? May be you are not a big fan of losing time in redoing the same task again and again? In these very rare cases, you will want to save your model and load it when required.
+
+Hopefully for you, **XGBoost** implements such functions.
+
+```{r saveModel, message=F, warning=F}
+# save model to binary local file
+xgb.save(bst, "xgboost.model")
+```
+
+> `xgb.save` function should return `r TRUE` if everything goes well and crashes otherwise.
+
+An interesting test to see how identical our saved model is to the original one would be to compare the two predictions.
+
+```{r loadModel, message=F, warning=F}
+# load binary model to R
+bst2 <- xgb.load("xgboost.model")
+pred2 <- predict(bst2, test$data)
+
+# And now the test
+print(paste("sum(abs(pred2-pred))=", sum(abs(pred2-pred))))
+```
+
+```{r clean, include=FALSE}
+# delete the created model
+file.remove("./xgboost.model")
+```
+
+> result is `0`? We are good!
+
+In some very specific cases, like when you want to pilot **XGBoost** from `caret` package, you will want to save the model as a *R* binary vector. See below how to do it.
+
+```{r saveLoadRBinVectorModel, message=F, warning=F}
+# save model to R's raw vector
+rawVec <- xgb.save.raw(bst)
+
+# print class
+print(class(rawVec))
+
+# load binary model to R
+bst3 <- xgb.load(rawVec)
+pred3 <- predict(bst3, test$data)
+
+# pred2 should be identical to pred
+print(paste("sum(abs(pred3-pred))=", sum(abs(pred2-pred))))
+```
+
+> Again `0`? It seems that `XGBoost` works pretty well!
+
+#Part2
+
+See https://cran.r-project.org/web/packages/xgboost/vignettes/discoverYourData.html
+
+##Introduction
+
+The purpose of this Vignette is to show you how to use Xgboost to discover and understand your own dataset better.
+
+This Vignette is not about predicting anything (see See Part 1 above). We will explain how to use Xgboost to highlight the link between the features of your data and the outcome.
+```{r warning=FALSE, message=FALSE}
+require(xgboost)
+require(Matrix)
+require(data.table)
+if (!require('vcd')) install.packages('vcd') 
+```
+
+VCD package is used for one of its embedded dataset only.
+
+###Preparation of the dataset
+
+####Numeric VS categorical variables
+
+Xgboost manages only numeric vectors.
+
+What to do when you have categorical data?
+
+A categorical variable has a fixed number of different values. For instance, if a variable called Colour can have only one of these three values, red, blue or green, then Colour is a categorical variable.
+
+In R, a categorical variable is called factor.
+
+Type ?factor in the console for more information.
+
+To answer the question above we will convert categorical variables to numeric one.
+
+####Conversion from categorical to numeric variables
+
+Looking at the raw data
+
+In this Vignette we will see how to transform a dense data.frame (dense = few zeroes in the matrix) with categorical variables to a very sparse matrix (sparse = lots of zero in the matrix) of numeric features.
+
+The method we are going to see is usually called one-hot encoding.
+
+The first step is to load Arthritis dataset in memory and wrap it with data.table package.
+```{r warning=FALSE, message=FALSE}
+data(Arthritis)
+df <- data.table(Arthritis, keep.rownames = F)
+```
+data.table is 100% compliant with R data.frame but its syntax is more consistent and its performance for large dataset is best in class (dplyr from R and panda from Python included). Some parts of Xgboost R package use data.table.
+
+The first thing we want to do is to have a look to the first lines of the data.table:
+```{r warning=FALSE, message=FALSE}
+head(df)
+```
+
+Now we will check the format of each column.
+```{r warning=FALSE, message=FALSE}
+str(df)
+```
+
+2 columns have factor type, one has ordinal type.
+
+ordinal variable :
+• can take a limited number of values (like factor) ;
+• these values are ordered (unlike factor). Here these ordered values are: Marked > Some > None
+
+####Creation of new features based on old ones
+
+We will add some new categorical features to see if it helps.
+
+Grouping per 10 years
+
+For the first feature we create groups of age by rounding the real age.
+
+Note that we transform it to factor so the algorithm treat these age groups as independent values.
+
+Therefore, 20 is not closer to 30 than 60. To make it short, the distance between ages is lost in this transformation.
+```{r warning=FALSE, message=FALSE}
+head(df[,AgeDiscret := as.factor(round(Age/10,0))])
+```
+
+####Random split in two groups
+
+Following is an even stronger simplification of the real age with an arbitrary split at 30 years old. I choose this value based on nothing. We will see later if simplifying the information based on arbitrary values is a good strategy (you may already have an idea of how well it will work…).
+```{r warning=FALSE, message=FALSE}
+head(df[,AgeCat:= as.factor(ifelse(Age > 30, "Old", "Young"))])
+```
+
+####Risks in adding correlated features
+
+These new features are highly correlated to the Age feature because they are simple transformations of this feature. 
+
+For many machine learning algorithms, using correlated features is not a good idea. It may sometimes make prediction less accurate, and most of the time make interpretation of the model almost impossible. GLM, for instance, assumes that the features are uncorrelated.
+
+Fortunately, decision tree algorithms (including boosted trees) are very robust to these features. Therefore we have nothing to do to manage this situation.
+
+###Cleaning data
+
+We remove ID as there is nothing to learn from this feature (it would just add some noise).
+```{r warning=FALSE, message=FALSE}
+df[,ID:=NULL]
+```
+We will list the different values for the column Treatment:
+```{r warning=FALSE, message=FALSE}
+levels(df[,Treatment])
+```
+
+###One-hot encoding
+
+Next step, we will transform the categorical data to dummy variables. This is the one-hot encoding step.
+
+The purpose is to transform each value of each categorical feature in a binary feature {0, 1}.
+
+For example, the column Treatment will be replaced by two columns, Placebo, and Treated. Each of them will be binary. Therefore, an observation which has the value Placebo in column Treatment before the transformation will have after the transformation the value 1 in the new column Placebo and the value 0 in the new column Treated. The column Treatment will disappear during the one-hot encoding.
+
+Column Improved is excluded because it will be our label column, the one we want to predict.
+```{r warning=FALSE, message=FALSE}
+sparse_matrix <- sparse.model.matrix(Improved~.-1, data = df)
+head(sparse_matrix)
+```
+
+Formulae Improved~.-1 used above means transform all categorical features but column Improved to binary values. The -1 is here to remove the first column which is full of 1 (this column is generated by the conversion). For more information, you can type ?sparse.model.matrix in the console.
+
+Create the output numeric vector (not as a sparse Matrix):
+```{r warning=FALSE, message=FALSE}
+output_vector = df[,Improved] == "Marked"
+```
+1.set Y vector to 0; 
+2.set Y to 1 for rows where Improved == Marked is TRUE ; 
+3.return Y vector.
+
+###Build the model
+
+The code below is very usual. For more information, you can look at the documentation of xgboost function (or at the vignette Xgboost presentation).
+```{r warning=FALSE, message=FALSE}
+bst <- xgboost(data = sparse_matrix, label = output_vector, max.depth = 4,
+               eta = 1, nthread = 2, nround = 10,objective = "binary:logistic")
+```
+You can see some train-error: 0.XXXXX lines followed by a number. It decreases. Each line shows how well the model explains your data. Lower is better.
+
+A model which fits too well may overfit (meaning it copy/paste too much the past, and won't be that good to predict the future). 
+
+Here you can see the numbers decrease until line 7 and then increase. 
+
+It probably means we are overfitting. To fix that I should reduce the number of rounds to nround = 4. I will let things like that because I don't really care for the purpose of this example :-)
+
+###Feature importance
+
+Measure feature importance
+
+Build the feature importance data.table
+
+In the code below, sparse_matrix@Dimnames[[2]] represents the column names of the sparse matrix. These names are the original values of the features (remember, each binary column == one value of one categorical feature).
+```{r warning=FALSE, message=FALSE}
+importance <- xgb.importance(sparse_matrix@Dimnames[[2]], model = bst)
+head(importance)
+```
+
+The column Gain provide the information we are looking for.
+
+As you can see, features are classified by Gain.
+
+Gain is the improvement in accuracy brought by a feature to the branches it is on. The idea is that before adding a new split on a feature X to the branch there was some wrongly classified elements, after adding the split on this feature, there are two new branches, and each of these branch is more accurate (one branch saying if your observation is on this branch then it should be classified as 1, and the other branch saying the exact opposite).
+
+Cover measures the relative quantity of observations concerned by a feature.
+
+Frequence is a simpler way to measure the Gain. It just counts the number of times a feature is used in all generated trees. You should not use it (unless you know why you want to use it).
+
+Improvement in the interpretability of feature importance data.table
+
+We can go deeper in the analysis of the model. In the data.table above, we have discovered which features counts to predict if the illness will go or not. But we don't yet know the role of these features. For instance, one of the question we may want to answer would be: does receiving a placebo treatment helps to recover from the illness?
+
+One simple solution is to count the co-occurrences of a feature and a class of the classification.
+
+For that purpose we will execute the same function as above but using two more parameters, data and label.
+```{r warning=FALSE, message=FALSE}
+importanceRaw <- xgb.importance(sparse_matrix@Dimnames[[2]], model = bst, data = sparse_matrix, label = output_vector)
+```
+
+##Cleaning for better display
+
+```{r warning=FALSE, message=FALSE}
+importanceClean <- importanceRaw[,`:=`(Cover=NULL, Frequence=NULL)]
+
+head(importanceClean)
+```
+
+In the table above we have removed two not needed columns and select only the first lines.
+
+First thing you notice is the new column Split. It is the split applied to the feature on a branch of one of the tree. Each split is present, therefore a feature can appear several times in this table. Here we can see the feature Age is used several times with different splits.
+
+How the split is applied to count the co-occurrences? It is always <. For instance, in the second line, we measure the number of persons under 61.5 years with the illness gone after the treatment.
+
+The two other new columns are RealCover and RealCover %. In the first column it measures the number of observations in the dataset where the split is respected and the label marked as 1. The second column is the percentage of the whole population that RealCover represents.
+
+Therefore, according to our findings, getting a placebo doesn't seem to help but being younger than 61 years may help (seems logic).
+
+You may wonder how to interpret the < 1.00001 on the first line. Basically, in a sparse Matrix, there is no 0, therefore, looking for one hot-encoded categorical observations validating the rule < 1.00001 is like just looking for 1 for this feature.
+
+###Plotting the feature importance
+
+All these things are nice, but it would be even better to plot the results.
+```{r warning=FALSE, message=FALSE}
+library(Ckmeans.1d.dp)
+xgb.plot.importance(importance_matrix = importanceRaw)
+```
+
+Feature have automatically been divided in 2 clusters: the interesting features… and the others.
+
+Depending of the dataset and the learning parameters you may have more than two clusters. Default value is to limit them to 10, but you can increase this limit. Look at the function documentation for more information.
+
+According to the plot above, the most important features in this dataset to predict if the treatment will work are :
+- the Age ;
+- having received a placebo or not ;
+- the sex is third but already included in the not interesting features group ; 
+- then we see our generated features (AgeDiscret). We can see that their contribution is very low.
+
+Do these results make sense?
+
+Let's check some Chi2 between each of these features and the label.
+
+Higher Chi2 means better correlation.
+```{r warning=FALSE, message=FALSE}
+c2 <- chisq.test(df$Age, output_vector)
+print(c2)
+```
+
+Pearson correlation between Age and illness disapearing is 35.48.
+```{r warning=FALSE, message=FALSE}
+c2 <- chisq.test(df$AgeDiscret, output_vector)
+print(c2)
+```
+
+Our first simplification of Age gives a Pearson correlation is 8.26.
+```{r warning=FALSE, message=FALSE}
+c2 <- chisq.test(df$AgeCat, output_vector)
+print(c2)
+```
+
+The perfectly random split I did between young and old at 30 years old have a low correlation of 2.36. It's a result we may expect as may be in my mind > 30 years is being old (I am 32 and starting feeling old, this may explain that), but for the illness we are studying, the age to be vulnerable is not the same. 
+
+Morality: don't let your gut lower the quality of your model. 
+
+In data science expression, there is the word science :-)
+
+##Conclusion
+
+As you can see, in general destroying information by simplifying it won't improve your model. Chi2 just demonstrates that. 
+
+But in more complex cases, creating a new feature based on existing one which makes link with the outcome more obvious may help the algorithm and improve the model. 
+
+The case studied here is not enough complex to show that. Check Kaggle website for some challenging datasets. However it's almost always worse when you add some arbitrary rules.
+
+Moreover, you can notice that even if we have added some not useful new features highly correlated with other features, the boosting tree algorithm have been able to choose the best one, which in this case is the Age.
+
+Linear model may not be that smart in this scenario.
+
+##Special Note: What about Random Forests™?
+
+As you may know, Random Forests™ algorithm is cousin with boosting and both are part of the ensemble learning family.
+
+Both trains several decision trees for one dataset. The main difference is that in Random Forests™, trees are independent and in boosting, the tree N+1 focus its learning on the loss (<=> what has not been well modeled by the tree N).
+
+This difference have an impact on a corner case in feature importance analysis: the correlated features.
+
+Imagine two features perfectly correlated, feature A and feature B. For one specific tree, if the algorithm needs one of them, it will choose randomly (true in both boosting and Random Forests™).
+
+However, in Random Forests™ this random choice will be done for each tree, because each tree is independent from the others. Therefore, approximatively, depending of your parameters, 50% of the trees will choose feature A and the other 50% will choose feature B. So the importance of the information contained in A and B (which is the same, because they are perfectly correlated) is diluted in A and B. So you won't easily know this information is important to predict what you want to predict! It is even worse when you have 10 correlated features…
+
+In boosting, when a specific link between feature and outcome have been learned by the algorithm, it will try to not refocus on it (in theory it is what happens, reality is not always that simple). Therefore, all the importance will be on feature A or on feature B (but not both). You will know that one feature have an important role in the link between the observations and the label. It is still up to you to search for the correlated features to the one detected as important if you need to know all of them.
+
+If you want to try Random Forests™ algorithm, you can tweak Xgboost parameters! 
+
+Warning: this is still an experimental parameter.
+
+For instance, to compute a model with 1000 trees, with a 0.5 factor on sampling rows and columns:
+```{r warning=FALSE, message=FALSE}
+data(agaricus.train, package='xgboost')
+data(agaricus.test, package='xgboost')
+train <- agaricus.train
+test <- agaricus.test
+
+#Random Forest™ - 1000 trees
+bst <- xgboost(data = train$data, label = train$label, max.depth = 4, num_parallel_tree = 1000, subsample = 0.5, colsample_bytree =0.5, nround = 1, objective = "binary:logistic")
+```
+
+
+#Boosting - 3 rounds
+```{r warning=FALSE, message=FALSE}
+bst <- xgboost(data = train$data, label = train$label, max.depth = 4, nround = 3, objective = "binary:logistic")
+```
+
+Note that the parameter round is set to 1.

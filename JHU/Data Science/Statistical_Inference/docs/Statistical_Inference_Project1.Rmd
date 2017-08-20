@@ -1,0 +1,102 @@
+---
+output: pdf_document
+geometry: margin=.5in
+fontsize: 10pt
+---
+\begin{center}
+JHU Project 1: Central Limit Theorem - Exponential Distribution  
+\end{center}
+\begin{center}
+Cliff Weaver - September 22, 2015
+\end{center}
+```{r echo=FALSE}
+# Use this to create Latex equations: http://www.codecogs.com/latex/eqneditor.php
+```
+![JHU](JHU.png)
+
+#Statistical Inference Course Project  
+Cliff Weaver  
+September 22, 2015
+
+##Overview
+
+The goal of this exercise is to investigate the exponential distribution in R and compare it with the Central
+Limit Theorem. The exponential distribution can be simulated in R with rexp(n, lambda) where lambda is
+the rate parameter. The mean of exponential distribution is 1/lambda and the standard deviation is also
+1/lambda.
+
+According to the central limit theorem distribution of $\bar{x}$ is approximately normal. The approximation can be poor if the sample size is small, but it improves with larger sample sizes. In absence of identified clear outliers, the distribution of the sample mean, is  approximated by a normal model $\bar{x}_{n}$ ~ $N(\mu, \frac{\sigma }{\sqrt{n}})$.
+
+In order to accomplish this exercise we take $\lambda$ = 0.2 and the exercise will be conducted on 10,000 simulations.
+
+***
+
+##Comparison of Sample & Theoretical Means of the Distribution
+
+In the following we will draw 10,000 samples of size 40 from an $Exp(\frac{1}{0.2}, \frac{1}{0.2})$ distribution. For each of the 10,000 samples we will calculate the mean. Theoretically, this the same as drawing a single sample of size 10,000 from the corresponding sampling distribution with $N(\frac{1}{0.2}, \frac{\frac{1}{0.2}}{\sqrt{40}})$.
+
+```{r simulated_avg_of_40_exponentials, echo=TRUE}
+# load  library for graphing
+library(ggplot2)
+
+# Parameters for simulation
+lambda <- 0.2 # lambda
+n <- 40 # sample size
+nSimulations <- 10000 # number of simulations
+
+# To ensure reproducibility
+set.seed(500)
+
+#Run test to calculate mean
+meanData <- matrix(data=rexp(n*nSimulations,lambda),nrow=nSimulations)
+meanData_df <- data.frame(means=apply(meanData, 1, mean))
+# Average Sample Mean of 10,000 Simulations
+meanSample <- mean(meanData_df$means)
+```
+
+The sample mean (meanSample) returns `r meanSample` and the theoretical mean ($\mu= \frac{1}{\lambda}$ ) is `r 1/lambda`.  *This answers the first question in the Peer Review Questionaire.*
+
+>  Conclusion: As expected the sample mean from the simulations is close to the theoretical mean.
+
+***
+
+##Comparison of Sample Variance to the Theoretical Variance
+
+ The theoretical variance is calculated as square of the standard deviation or calculated as
+ $\sigma = \frac{1/\lambda}{\sqrt{n}}$,
+ $Var = \sigma^2$
+```{r sample and theoretical variacne comparison, echo=TRUE}
+sampleVariance <- var(meanData_df$means) # Sample variance
+theoreticalVariance <- (1/lambda)^2/n # theoretical variance
+```
+
+*The conclusion below answers the second question in the Peer Review Questionaire.*
+
+>  Conclusion: The calculated Sample Variance (`r sampleVariance`) and the theoretical variance `r theoreticalVariance` are close. Minor differences possible because the variance is square of standard deviation and small differences may be magnified.
+
+##Investigating Normality of the Distribution
+
+To investigate the normality of the sample distribution with 10,000 simulated sample means a histogram is plotted and overlayed with the density function from the theoretical sampling which is $N(\frac{1}{0.2}, \frac{\frac{1}{0.2}}{\sqrt{40}})$ distributed. 
+
+```{r, echo=TRUE}
+#plot the means
+mu <- 1/lambda
+sd <- 1/lambda/sqrt(n)
+# plot the histogram of averages
+hist(meanData_df$means, breaks=50, prob=TRUE,
+     main="Distribution of Sampling Average",
+     xlab="")
+# density of the averages of samples
+lines(density(meanData_df$means))
+# theoretical center of distribution
+abline(v=1/lambda, col="blue")
+# theoretical density of the averages of samples
+xfit <- seq(min(meanData_df$means), max(meanData_df$means), length=100)
+yfit <- dnorm(xfit, mean=mu, sd = sd)
+lines(xfit, yfit, pch=22, col="blue", lty=2)
+# add legend
+legend('topright', c("Simulated", "Theoretical"), lty=c(1,2), col=c("black", "blue"))
+```
+
+>  Conclusion: It can be reasonably inferred the distribution of means of randomly sampled exponential distributions overlap with the normal distribution of expected values based on $\lambda$. Therefore, it can be considered approximately normal.
+
