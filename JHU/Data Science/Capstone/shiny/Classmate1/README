@@ -1,7 +1,0 @@
-This shiny application has been done as an assignment for the Capstone Project of the
-Coursera Data Science specialization.
-
-Given a text written by the user, the application predicts the likely next word. It
-uses ngram language models ( up to trigrams ) and a backoff model ( supported by
-good-turing smoothing ).
-
