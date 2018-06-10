@@ -1,0 +1,26 @@
+---
+title: "Gain Lift Plots Explained"
+output:
+prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+if(!require(easypackages)){install.packages("easypackages")}
+library(easypackages)
+packages("plyr", "dplyr", "ggplot2", prompt = FALSE)
+```
+
+Need to rerun Lift Plot video to create the content for this document.
+    
+```{r, out.width = "600px", echo=FALSE}
+knitr::include_graphics("../05_Evaluation/GainLiftExplain.JPG")
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+

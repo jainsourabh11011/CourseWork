@@ -1,0 +1,26 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+# Instacart Market Basket Analysis
+
+The goal of the _Instacart Market Basket Analysis_ is to expose the Business Scientist to methods for creating product recommendations based on a market basket. The primary package used is `recommenderlab`, an R package designed to make it easy to perform various recommendation algorithms and rapidly determine a good approach. 
+
+
+## Files and Directory Structure
+
+- __00_Data__: All data is contained in the data folder. The data is also available online from [Instacart](https://www.instacart.com/datasets/grocery-shopping-2017).
+
+- __00_Scripts__: Any scripts for "helper" functions are included in the scripts folder. 
+
+- __00_References__: References are provided as further resources for investigating `recommenderlab`
+
+- __01_Analysis__: The analysis including RMarkdown report and HTML are provided in the analysis folder.

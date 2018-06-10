@@ -1,0 +1,631 @@
+---
+title: "Instacart Market Basket Analysis"
+author: "Business Science"
+date: "May 18, 2018"
+output: 
+  html_document:
+    highlight: tango
+    theme: flatly
+    toc: true
+    toc_float: true
+    df_print: tibble
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+    eval       = TRUE,
+    warning    = FALSE,
+    message    = FALSE,
+    fig.height = 6,
+    fig.width  = 6
+    )
+```
+
+# Overview
+
+This is a detailed code-through (code-based walkthrough tutorial) designed to familiarize the Business Scientist with:
+
+- Market Basket Analysis
+- Various methods for making product recommendations
+- The `recommenderlab` R package. 
+
+# Market Basket Analysis Strategies {.tabset .tabset-pills}
+
+[Market Basket Analysis (also called Affinity Analysis)](https://en.wikipedia.org/wiki/Affinity_analysis) is the process of discovering relationships between individuals and the products that they purchase. It's an excellent way to better understand customer buying habits (think likelihood of a clothing purchase based on similarity to other customers in retail) and to create product recommendations (think Netflix ratings-based movie recommendations). There are several common methods to perform Market Basket Analysis each with strengths and weaknesses including:
+
+- Collaborative Filtering
+- Association Rules
+- Item Popularity
+- Content-Based Filtering
+- Hybrid Models
+
+__Click the tabs below__ to learn more about each method. 
+
+## Collaborative Filtering
+
+__Collaborative Filtering__ is uses mathematical similarities to determine the likelihood of product purchases. Two strategies are employed: __(1) user-based (e.g. customers) or (2) item-based (e.g. products)__. Both methodologies start with a __ratings matrix__, which is simply the users (rows) by the items (columns). Similarity is typically performed using Cosine similarity or Jaccard similarity. 
+
+__User-based collaborative filtering (UBCF)__ investigates similarities between the users market basket to find other users with similar baskets, then developing probabilities of items based on the highest probability products. Note that this method disregards the item-based similarities. 
+
+__Item-based collaboartive filtering (IBCF)__ investigates similarities between items that are frequently purchased together. Note that this method disregards the user-based similarities. 
+
+## Association Rules
+
+__Association Rules__: Association Rules are widely used to analyze retail basket or transaction data, and are intended to identify strong rules discovered in transaction data using measures of interestingness, based on the concept of strong rules. [^1] Rules between two items purchased are developed using three metrics: "Support", "Confidence", and "Lift":
+
+- __Support__ is the probability of two items co-occurring. P(Item1 & Item2)
+- __Confidence__ is the Support divided by the probability of purchasing the second item. Support / P(Item2)
+- __Lift__ is the Confidence divided by the probability of purchasing the first item. Confidence / P(Item1)
+
+When combined, the items most likely to be purchased is that with the highest association _Lift_. The method is fast and works well by analyzing items most frequently purchased together. One downside is it doesn't consider the user's purchase history.
+
+[^1]: [Susan Li has a great article](https://towardsdatascience.com/a-gentle-introduction-on-market-basket-analysis-association-rules-fa4b986a40ce) on Association Rules mining using the `arules` R package. Association rules are included in the `recommenderlab` package, which imports `arules`.
+
+
+## Popular Items
+
+__Popular Items__: This strategy is simple yet effective. Just sort the items based on purchase frequency (i.e. popularity) to understand global purchasing habits. Recommendations are just the most frequently purchased items that the are not currently being purchased. The downside is this approach may be too simple missing some of the underlying similarities within segments or cohorts of customers. However, the Business Scientist may be able to further categorize popularity (e.g. if customer is in power tools aisle, list most popular power tools).
+
+## Content-Based Filtering
+
+__Content-Based Filtering__ evaluates the _past history_ of a purchaser to develop probability of future purchases. This method can be useful in discovering key user preferences such as what he/she tends to purchase at which time of day or day of week. The method requires detailed knowledge of past history. If this is unavailable, a similar user profile (e.g. based on demographic information) can be used in place of detailed history. 
+
+## Hybrid Models
+
+__Hybrid Models__ are often an "ensemble" of multiple approaches that leverage the strengths of various modeling approaches. A typical ensemble may include both user-based and item-based collaborative filtering to mine both user and item based similarities along with content-based filtering that leverages the history of the customer's purchases. The resulting model is often better than any one of the models. 
+
+
+
+# Analysis
+
+In this analysis, we develop several models using Collaborative Filtering, Association Rules, and Popularity modeling strategies, which are easily generated and compared using the `recommenderlab` package. 
+
+
+## Libraries
+
+Load the following libraries to proceed with this tutorial. Use `install.packages()` to retrieve any uninstalled packages from CRAN. 
+
+```{r}
+library(recommenderlab)
+library(tidyverse)
+library(tidyquant)
+library(fs)
+library(knitr)
+library(glue)
+library(cowplot)
+```
+
+
+
+## Data
+
+The [Instacart dataset](https://www.instacart.com/datasets/grocery-shopping-2017) is open sourced as discussed in this [article by Instacart](https://tech.instacart.com/3-million-instacart-orders-open-sourced-d40d29ead6f2). In addition, a [Kaggle Competition](https://www.kaggle.com/c/instacart-market-basket-analysis) was run in 2016-2017, which further promoted use of the Instacart dataset among the Data Science Community.  
+
+The Instacart Dataset contains a number of interesting features that can be further analyzed including departments, aisles, reordering habits, and so on. The analysis we perform will focus on Market Basket, which is the contents of individual orders (i.e. `order_id` and `product_name`). 
+
+Read the files in the "00_Data" folder. The function, `read_directory_to_list()` is stored in the "00_Scripts" folder, and it iterates through the CSV files in the data folder storing each file as a tibble within a list. 
+
+```{r}
+# Warning: This is a long-running script, which may take 1 minute or so to load
+# The sourced file includes the read_director_to_list() function
+source("../00_Scripts/read_directory.R")
+
+instacart_raw_list <- read_directory_to_list("../00_Data")
+```
+
+Here are the element names for the data (tibbles) stored in `instacart_raw_list`.
+
+```{r}
+instacart_raw_list %>% names()
+```
+
+We'll create a market basket from the orders by combining "order_products__prior" and the "products" data. We can see that it's __32.4M rows__, which is a lot of data to deal with. Creating a recommender with this size data set would be a lot to handle.  
+
+```{r}
+market_basket_tbl <- instacart_raw_list$order_products__prior %>%
+    inner_join(instacart_raw_list$products, by = "product_id")
+
+market_basket_tbl %>%
+    select(order_id, product_name)
+```
+
+## CRISP-DM / BSPF Data Science Process
+
+We'll follow the combined BSPF / CRISP-DM data science framework. For brevity, we won't go into a full BSPF analysis (this is not practical for a code through). 
+
+```{r, out.width="70%", fig.align="center"}
+include_graphics("../00_Images/Business Science Problem Framework.png")
+```
+
+
+### 1. Business Understanding
+
+The business problem is that we can potentially derive more sales from our customers by recommending products they are likely to want. Often the customer goes to the store or visits the website for a specific reason, but for the organization this is a prime opportunity to increase sales by recommending products the customer may not be thinking about. These could be:  
+
+1. Products similar people purchased (think Bill and Jeff both enjoy World of Warcraft so they might like the same computer gaming setup)
+
+2. Products that were purchased with similar items (think portable chargers for an Amazon Alexa)
+
+3. Products that were purchased in the recent past (think baby diapers, which, as a new father, I (Matt) am finding that babies go through FAST)
+
+
+### 2. Data Understanding
+
+One of the easiest ways to understand a _market basket_ is by looking at how frequently items are purchased. We can use the `count()` function along with some calculations to understand which items are popular: 
+
+- Percentage of total "pct"
+- Cumulative percentage of total "cumulative_pct"
+- Popular product which we define somewhat arbitrarily as less than or equal to 50% cumulative percent 
+
+```{r}
+item_frequency_tbl <- market_basket_tbl %>%
+    count(product_name) %>%
+    arrange(desc(n)) %>%
+    mutate(
+        pct = n / sum(n),
+        cumulative_pct = cumsum(pct),
+        popular_product = ifelse(cumulative_pct <= 0.5, "Yes", "No")
+        )
+
+item_frequency_tbl
+```
+
+We can see a few things from this table:
+
+1. The top item (1.45% of purchases) is Bananas
+2. There are almost 50K items, which is a lot to handle via a ratings matrix (discussed in data preparation)
+
+Let's visualize to see what we are dealing with. We'll use `ggplot2` to help some of the interesting aspects of the market basket stand out. 
+
+- We'll set the `size = n`, which increases the size of the point based on how frequently it is purchased. 
+- We'll set the `color = popular_product`, which separates items in the top 50% of purchase frequency from items in the bottom 50%.
+
+```{r, fig.width=8, fig.height=5}
+item_frequency_tbl %>%
+    rowid_to_column() %>%
+    ggplot(aes(rowid, n)) +
+    geom_point(aes(size = n, color = popular_product), alpha = 0.2) +
+    theme_tq() +
+    scale_color_tq() +
+    theme(legend.direction = "vertical", 
+          legend.position  = "right") +
+    labs(title = "Item Frequency", 
+         subtitle = "Top Items Account For Majority Of Purchases")
+```
+
+From the visualization, we immediately see that the data is highly skewed. The top 50% of purchases, `sum(n)`, are derived from __only 786__ of the almost 50,000 items. This is less than 1.6% of the total products (items).
+
+```{r}
+item_frequency_tbl %>%
+    count(popular_product) %>%
+    mutate(pct = nn / sum(nn))
+```
+
+
+### 3. Data Preparation
+
+We'll need to create a __ratings matrix__, which has the purchase history formatted in a 2x2 matrix with rows being orders and columns being products. This format is often called a __user-item matrix__ because users (e.g. customers or orders) tend to be on the rows and items (e.g. products) in the columns. 
+
+The ratings matrix can be extraordinarily sparse given we have 32M+ data points with 50K products. Further, many of these data points are not _meaningful_. We saw that the data is highly skewed, which indicates that the lowest frequency items can likely be discarded because these are by definition "unpopular". We can plan our data preparation by:
+
+- Taking advantage of item popularity. A small proportion of the products are driving a large proportion of the purchase frequencies. By limiting to the top items, we can reduce the width of the ratings matrix making it much easier to handle without losing much.
+
+- Further reduce the height of the matrix through sampling. We can sample 20,000 orders to make the ratings matrix more manageable. Further, we can limit the market baskets to those with at least 3 popular items, which ensures similarities between multiple items. 
+
+First, let's filter to only the products that are popular, meaning the top products that drive 50% of the purchases. 
+
+```{r}
+# Get names of top products
+top_products_vec <- item_frequency_tbl %>%
+    filter(popular_product == "Yes") %>%
+    pull(product_name)
+
+# Use names to filter 
+top_products_basket_tbl <- market_basket_tbl %>%
+    filter(product_name %in% top_products_vec) %>%
+    select(order_id, product_name)
+
+top_products_basket_tbl
+```
+
+Next, let's sample 20,000 orders and then filter to those with baskets of at least 3 popular items. Note that it could take a while to filter first due to the aggregation step. The downside is that we end up with less than 20,000 total samples. If desired, we could increase the sample size further. 
+
+```{r}
+n_sample  <- 20000
+min_items <- 3
+
+set.seed(100)
+sample_order_ids <- sample(unique(top_products_basket_tbl$order_id), size = n_sample)
+
+top_products_sample_tbl <- top_products_basket_tbl %>%
+    # Sample orders
+    filter(order_id %in% sample_order_ids) %>%
+    # Filter using min_items
+    group_by(order_id) %>%
+    filter(n() >= min_items) %>%
+    ungroup()
+
+top_products_sample_tbl
+```
+
+Last, convert the sampled market baskets to a ratings matrix in the format that `recommenderlab` uses. The type of ratings matrix is a __"binary rating matrix"__, which consists of 0's and 1's indicating whether or not a product was purchased. 
+
+```{r}
+ratings_matrix_rlab <- top_products_sample_tbl %>%
+    # Spread into user-item format
+    mutate(value = 1) %>%
+    spread(product_name, value, fill = 0) %>%
+    # Convert to matrix
+    select(-order_id) %>%
+    as.matrix() %>%
+    # Convert to binaryRatingsMatrix class used by recommenderlab
+    as("binaryRatingMatrix")
+
+ratings_matrix_rlab
+```
+
+As a side note, a second type of ratings matrix, a __"real rating matrix"__ consisting of actual user ratings (e.g. Netflix movie ratings on a 1 to 5 scale), is permitted. This format must be normalized, which can be done using the `normalize()` function. Because we are working with binary data, no normalization is necessary.  
+
+
+### 4. Modeling
+
+The `recommenderlab` package makes it easy to test multiple algorithms to quickly determine which are promising. We'll test out several that can be used with binary 0-1 data. We can review the available `recommenderlab` algorithms for class "binaryRatingMatrix" using the `recommenderRegistry$get_entries()` function. By supplying the argument, `datatype = "binaryRatingMatrix"`, we can get only those that pertain to a 1-0 ratings problem. These include:
+
+- ALS: Alternating Least Squares (Not discussed as part of this analysis due to issues with the `recommenderlab` implementation of the algorithm)
+- AR: Association Rules
+- IBCF: Item-Based Collaborative Filtering
+- Popular: Popularity-Based Recommendations
+- Random: A useful baseline case to determine effectiveness
+- UBCF: User-Based Collaborative Filtering
+
+```{r}
+recommenderRegistry$get_entries(dataType = "binaryRatingMatrix")
+```
+
+#### 4.1 Training/Test Split
+
+The data should be separated into training and testing sets if we wish to determine the effectiveness. We can split into training and test sets using the `evaluationScheme()` function. We can also setup 5-fold cross validation using `k = 5`. However, to keep processing time low, we will select `k = NULL`. Setting `given = -1` means that all but 1 item will be used for learning and the remaining item will be used for evaluation. 
+
+```{r}
+eval_scheme <- ratings_matrix_rlab %>% 
+    evaluationScheme(method = "split", train = 0.9, k = NULL, given = -1)
+
+eval_scheme
+```
+
+#### 4.2 Algorithms
+
+To implement multiple modeling algorithms, we can setup a list of algorithms in a format that can be used by the `evaluate()` function from the `recommenderlab` package. Note that we exclude Alternating Least Squares (ALS) because it fail due to a "matrix subsetting issue". 
+
+```{r}
+algorithms_list <- list(
+    "random items"      = list(name  = "RANDOM", 
+                               param = NULL),
+    "popular items"     = list(name  = "POPULAR", 
+                               param = NULL),
+    "user-based CF"     = list(name  = "UBCF", 
+                               param = list(method = "Cosine", nn = 500)),
+    "item-based CF"     = list(name  = "IBCF", 
+                               param = list(k = 5)),
+    "association rules" = list(name  = "AR", 
+                               param = list(supp = 0.01, conf = 0.01))
+)
+```
+
+#### 4.3 Evaluate Scheme
+
+Next, we can process the algorithms using the `evaluate()` function. This will take a minute to run. We specify the `type = "topNList"` to evaluate a Top N List recommendation of products rather than a ratings-based evaluation. We specify `n = 1:10` to evaluate the accuracy of 1 through 10 recommendations. 
+
+```{r}
+# Warning: This will take a minute or so to run
+results_rlab <- recommenderlab::evaluate(
+    eval_scheme, 
+    algorithms_list, 
+    type  = "topNList", 
+    n     = 1:10)
+```
+
+#### 4.4 Model Performance
+
+The result is a list containing the 5 evaluations. 
+
+```{r}
+results_rlab
+```
+
+
+We can investigate a single model by using the `getConfusionMatrix()` function, which returns a list containing a matrix. Here is the output for the "random items" model. 
+
+```{r}
+results_rlab$`random items` %>%
+    getConfusionMatrix()
+```
+
+
+#### 4.5 Tidying The Performance Output
+
+We will tidy up the output by performing the following operations:
+
+- We use `pluck()` with an integer position of `1` to retrieve the first element (the only element) of the confusion matrix output.
+- We convert to a tibble with `as.tibble()`
+- We use `rownames_to_column()` to because the rownames are the number of recommendations evaluated
+
+```{r}
+results_rlab$`random items` %>%
+    getConfusionMatrix() %>%
+    pluck(1) %>%
+    as.tibble() %>%
+    rownames_to_column(var = "n")
+```
+
+
+Next, let's turn this into a function that can be mapped to each element of the list.
+
+```{r}
+tidy_confusion_matrix <- function(rlab_result) {
+    rlab_result %>%
+        getConfusionMatrix() %>%
+        pluck(1) %>%
+        as.tibble() %>%
+        rownames_to_column(var = "n")
+}
+```
+
+We can now `map()` this function to obtain all of the results in a tidy format. However, this still returns a list of 5 tibbles, and we need a single tibble so we can compare all the models against each other. We'll use a new function called `enframe()` to turn the list into a nested tibble with the names in a single column and the values in a nested column. We tack on an `unnest()` to get the results in a single level, unnested tibble. 
+
+```{r}
+results_tbl <- results_rlab %>%
+    map(tidy_confusion_matrix) %>%
+    enframe() %>%
+    unnest()
+
+results_tbl
+```
+
+#### 4.6 Visualizing The Performance Results
+
+We'll visualize the performance results to determine which modeling techniques stand out. First, we'll plot the ROC Curve, which pits the false positive rate against the true positive rate. Note that `fct_reorder2()` is useful in this type of plot to order the "name" (model type) by the best final FPR and TPR value, making the plot legend more readable.  
+
+```{r, fig.width=8}
+results_tbl %>%
+    ggplot(aes(FPR, TPR, 
+               color = fct_reorder2(as.factor(name), FPR, TPR))) +
+    geom_line() +
+    geom_label(aes(label = n)) +
+    theme_tq() +
+    scale_color_tq() +
+    theme(legend.position  = "right",
+          legend.direction = "vertical") +
+    labs(
+        title = "ROC Plot",
+        subtitle = "Best Model: User-Based Collaborative Filtering",
+        color = "Model Type"
+    )
+    
+```
+
+Next, we can plot the Precision Vs Recall curves. The Recall goes along the X-axis and the Precision goes along the Y-axis. We again see that the user-based collaborative filtering is the best model.
+
+```{r}
+results_tbl %>%
+    
+    ggplot(aes(recall, precision, 
+               color = fct_reorder2(as.factor(name), recall, precision))) +
+    geom_line() +
+    geom_label(aes(label = n)) +
+    theme_tq() +
+    scale_color_tq() +
+    theme(legend.position  = "right",
+          legend.direction = "vertical") +
+    labs(
+        title = "Precision Vs Recall Plot",
+        subtitle = "Best Model: User-Based Collaborative Filtering",
+        color = "Model Type"
+    )
+```
+
+
+#### 4.7 Grid Search (Advanced)
+
+Grid search is a great way to test for an optimal parameter set for the UBCF model. We begin by creating a modeling function, `model_ubcf()`, that returns the confusion matrix for a single UBCF model. The function takes three parameters: 
+
+* `method`: One of "Jaccard" or "Cosine", the two methods employed by UBCF to determine the similarity
+* `nn`: The number of nearest neighbors to use in determining the similarity
+* `eval_scheme`: The `recommenderlab` evaluation scheme set up using the `evaluationScheme()` function
+
+```{r}
+model_ubcf <- function(method, nn, eval_scheme) {
+    
+    # Define a single algorithm
+    algorithms_list <- list(
+        "user-based CF"     = list(name  = "UBCF", 
+                                   param = list(method = method, nn = nn))
+        )
+    
+    # Calculate the results on the evaluation scheme
+    eval_results_rlab <- recommenderlab::evaluate(
+        eval_scheme, 
+        algorithms_list, 
+        type = "topNList", 
+        n    = 1:10)
+    
+    # Return the confusion matrix using the getConfusionMatrix() function
+    ret <- getConfusionMatrix(eval_results_rlab[[1]])[[1]] %>%
+        as.tibble() %>%
+        rownames_to_column(var = "n") %>%
+        mutate(n = as.numeric(n))
+    
+    return(ret)
+
+}
+```
+
+Next, test out the `model_ubcf()` function with a single set of parameters to verify the confusion matrix is returned for each of the evaluation scheme predictions, `n = 1:10`. 
+
+```{r}
+method <- "jaccard"
+nn <- 25
+eval_scheme <- eval_scheme # Set up previously using 0.9/0.1 split
+
+model_ubcf(method, nn, eval_scheme)
+```
+
+Next, we can scale this to a grid of values to test which hyperparameter combinations provide the best confusion matrix results. We can use the `cross_df()` function from `purrr` to create an expanded grid of hyperparameter combinations. We then use `mutate()` and `map2()` to run the `model_ubcf()` function on each hyper parameter combination, storing the resulting confusion matrix in the "conf_matrix" column. __Note: This will take several minutes to run.__
+
+
+```{r}
+# Note: Long running script that will take 3-4 minutes to run
+grid_search_tbl <- list(method = c("cosine", "jaccard"),
+                        nn     = c(25, 150, 500, 1000)) %>%
+    cross_df() %>%
+    mutate(conf_matrix = map2(
+        .x = method, 
+        .y = nn, 
+        .f = model_ubcf, eval_scheme))
+```
+
+We can then transform the data for performance visualization.  
+
+```{r}
+data_transformed <- grid_search_tbl %>%
+    mutate(model_id = glue("{method}_{nn}")) %>%
+    select(model_id, method, nn, conf_matrix) %>%
+    unnest() %>%
+    mutate(model_id = as_factor(model_id) %>% fct_reorder2(FPR, TPR))
+
+data_transformed
+```
+
+
+Finally, we can use `cowplot` to generate a consolidated visualization of the ROC and Precision vs Recall Plots.   
+
+```{r, fig.height = 8}
+p1 <- data_transformed %>%
+    ggplot(aes(FPR, TPR, color = model_id)) +
+    geom_line(size = 1) +
+    theme_tq() +
+    scale_color_tq() +
+    labs(title = "ROC") +
+    theme(legend.position = "right")
+
+p2 <- data_transformed %>%
+    ggplot(aes(recall, precision, color = model_id)) +
+    geom_line(size = 1) +
+    theme_tq() +
+    scale_color_tq() +
+    labs(title = "Precision vs Recall") +
+    theme(legend.position = "right")
+
+p_title <- ggdraw() +
+    draw_label("Grid Search Results", size = 18, 
+               fontface = "bold", colour = palette_light()[[1]])
+
+plot_grid(p_title, p1, p2, ncol = 1, rel_heights = c(0.1, 1, 1))
+```
+
+We can see that choosing nearest neighbors (nn) of 25 yields poor results, but from 150 and beyond the results are all fairly close. Further, there is no real difference between Jaccard and Cosine performance. As a results, we can feel safe in selecting a combination of `method = "Jaccard"` and `nn = 500`. Note that the Jaccard method tends to be less computationally expensive but close in accuracy to the Cosine method.
+
+#### 4.8 Generate Predictions For New Users
+
+This part is really neat. Now that we know what recommendation scheme works best, we'll create a recommender trained using those settings using the `Recommender()` function. We'll use the following settings:
+
+- Model Type: `method = "UBCF"`
+- Model Parameters:
+    - `method = "Jaccard"`
+    - `nn = 500` for 500 nearest neighbors
+    
+The result is a `Recommender` object of type "UBCF". Think of this like the output of the `lm()` function.
+
+
+```{r}
+train_recLab <- getData(eval_scheme, "train")
+
+fit_ubcf_recLab <- recommenderlab::Recommender(
+    train_recLab, 
+    method = "UBCF", 
+    param = list(method = "Jaccard", 
+                 nn     = 500))
+
+fit_ubcf_recLab
+```
+
+Next, we'll create a hypothetical new user basket that contains Bananas and Organic Whole Milk. 
+
+```{r}
+new_user_basket <- c("Banana", "Organic Whole Milk")
+```
+
+Before we make any predictions, we need to convert this basket to the format that `recommenderlab` expects: A one hot encoded ratings matrices (wide data) with column names matching the training data and 1's and 0's matching whether or not the item exists in the basket. 
+
+To begin, we can get the column names from the training data using `train_recLab@data` and piping this to the `colnames()` function.
+
+```{r}
+top_items_names <- train_recLab@data %>% colnames()
+```
+
+Now that we have the column names stored as a character vector, we can create a tibble in the wide format with items in the columns and 1's and 0's as values for the users.
+
+```{r}
+new_user_basket_one_hot_tbl <- tibble(
+    item = top_items_names
+) %>%
+    mutate(value = as.numeric(item %in% new_user_basket)) %>%
+    spread(key = item, value = value)
+
+new_user_basket_one_hot_tbl
+```
+
+One final formatting step is to convert to matrix and then to the "binaryRatingMatrix" class.
+
+```{r}
+new_user_basket_rlab <- new_user_basket_one_hot_tbl %>%
+    as.matrix() %>%
+    as("binaryRatingMatrix")
+
+new_user_basket_rlab
+```
+
+Now we are ready to `predict()`. We supply the Recommender model, the new data and number of predictions we want to make. We'll select 5 predictions for the top 5 items similar customers bought. 
+
+```{r}
+pred_ubcf_recLab <- predict(
+    fit_ubcf_recLab, 
+    newdata = new_user_basket_rlab, 
+    n       = 5)
+
+pred_ubcf_recLab
+```
+
+Now that we have the predictions stored in an object, we can extract the prediction labels, which are stored withing `predictions@itemLabels`. We'll create a handy extractor function that takes the predictions object and a user number (which row to select if more than one prediction was made), and returns the product names. 
+
+```{r}
+extract_predictions <- function(predictions, user) {
+    predictions@itemLabels[predictions@items[[user]]]
+}
+```
+
+And voila, we get the predictions when we use the `extract_predictions()` functions for the first (and only) new user's basket. 
+
+```{r}
+pred_ubcf_recLab %>%
+    extract_predictions(1)
+```
+
+Just imagine an app on your phone as you go through and select products. Now we can easily return similar products that other customers purchased, which would likely increase sales!
+
+## 5. Evaluation
+
+Business case would need to be reviewed for potential for increased sales. The opportunity could be massive given the minimal setup cost and potential for customers to be given better service (options tuned to their needs) while boosting sales. 
+
+## 6. Deployment
+
+Deployment could be via a web application that the users interface with such as a standalone `Shiny` web application or an R-powered API end point built with `plumber`. 
+
+
+# References
+
+1. Recommender lab - https://cran.r-project.org/package=recommenderlab
+2. Recommenderlab Vignette - https://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf
+
+
+# Footnotes
