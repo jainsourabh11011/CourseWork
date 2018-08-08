@@ -121,16 +121,16 @@ extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, position = 2) 
 #  Save Model
 automl_models_h2o@leaderboard
 
-h2o.getModel("GLM_grid_0_AutoML_20180617_085805_model_0") %>% 
+h2o.getModel("GLM_grid_0_AutoML_20180806_163444_model_0") %>% 
      h2o.saveModel(path = "04_Modeling/h2o_models/")
 
-h2o.getModel("StackedEnsemble_AllModels_0_AutoML_20180617_085805") %>% 
+h2o.getModel("StackedEnsemble_BestOfFamily_0_AutoML_20180806_163444") %>% 
      h2o.saveModel(path = "04_Modeling/h2o_models/")
 
-h2o.getModel("GBM_grid_0_AutoML_20180617_085805_model_4") %>% 
+h2o.getModel("GBM_grid_0_AutoML_20180806_163444_model_4") %>% 
      h2o.saveModel(path = "04_Modeling/h2o_models/")
 
-h2o.getModel("DeepLearning_0_AutoML_20180617_085805") %>% 
+h2o.getModel("DeepLearning_0_AutoML_20180806_163444") %>% 
      h2o.saveModel(path = "04_Modeling/h2o_models/")
 
 #  Load Model
