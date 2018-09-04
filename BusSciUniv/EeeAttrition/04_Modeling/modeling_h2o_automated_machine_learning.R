@@ -15,11 +15,9 @@ pkgs <- c(
      "readxl"     # Reading excel files
 )
 
-
 if(!require(easypackages)){install.packages("easypackages")}
 library(easypackages)
 packages(pkgs, prompt = FALSE)
-
 
 # Load Data
 path_train <- "00_Data/telco_train.xlsx"
@@ -35,7 +33,7 @@ source("00_Scripts/data_processing_pipeline.R")
 train_readable_tbl <- process_hr_data_readable(train_raw_tbl, definitions_raw_tbl)
 test_readable_tbl <- process_hr_data_readable(test_raw_tbl, definitions_raw_tbl)
 
-# Machine Learning Preprocessing ----
+#Machine Learning Preprocessing ----
 #  H2O performs most preprocessing steps including dummy variables, factors, transformations 
 #  Data just has to be in readable formal with factors and numerical data
 
@@ -85,14 +83,7 @@ automl_models_h2o@leaderboard
 
 automl_models_h2o@leader
 
-# Select a model other than the leader
-h2o.getModel("StackedEnsemble_BestOfFamily_0_AutoML_20180522_084030")
-
-# Get a deep learning model
-h2o.getModel("DeepLearning_0_AutoML_20180522_084030")
-# The first test went well but 5-fold data not as good - suggests the first time there was overfitting
-
-# Create Custom h2o Extract Function
+# Select a model other than the leader by creating Custom h2o Extract Function
 
 automl_models_h2o@leaderboard %>% 
      as.tibble() %>% # Makes things easier to use
@@ -113,7 +104,7 @@ extract_h2o_model_name_by_position <- function(h2o_leaderboard, position = 1, ve
 }
 
 # Test new function
-extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, position = 2) %>% 
+extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, position = 3) %>% 
      h2o.getModel()
 
 # Save and Load Models
@@ -121,36 +112,42 @@ extract_h2o_model_name_by_position(automl_models_h2o@leaderboard, position = 2) 
 #  Save Model
 automl_models_h2o@leaderboard
 
-h2o.getModel("GLM_grid_0_AutoML_20180806_163444_model_0") %>% 
-     h2o.saveModel(path = "04_Modeling/h2o_models/")
-
-h2o.getModel("StackedEnsemble_BestOfFamily_0_AutoML_20180806_163444") %>% 
-     h2o.saveModel(path = "04_Modeling/h2o_models/")
-
-h2o.getModel("GBM_grid_0_AutoML_20180806_163444_model_4") %>% 
-     h2o.saveModel(path = "04_Modeling/h2o_models/")
-
-h2o.getModel("DeepLearning_0_AutoML_20180806_163444") %>% 
-     h2o.saveModel(path = "04_Modeling/h2o_models/")
+# Commented out to make the R file run as source
+# h2o.getModel("GLM_grid_0_AutoML_20180827_113110_model_0") %>% 
+#      h2o.saveModel(path = "04_Modeling/h2o_models/")
+# 
+# h2o.getModel("StackedEnsemble_BestOfFamily_0_AutoML_20180827_113110") %>% 
+#      h2o.saveModel(path = "04_Modeling/h2o_models/")
+# 
+# h2o.getModel("GBM_grid_0_AutoML_20180827_113110_model_4") %>% 
+#      h2o.saveModel(path = "04_Modeling/h2o_models/")
+# 
+# h2o.getModel("DeepLearning_0_AutoML_20180827_113110") %>% 
+#      h2o.saveModel(path = "04_Modeling/h2o_models/")
 
 #  Load Model
-h2o.loadModel("04_Modeling/h2o_models/GLM_grid_0_AutoML_20180522_084030_model_0")
+h2o.loadModel("04_Modeling/h2o_models/GLM_grid_0_AutoML_20180827_113110_model_0")
+
+# NOTE:  getModel returns a reference to an existing model in the H2O instance.
+#        loadModel loads a saved H2O model from disk. 
 
 # Making Predictions
 
 stacked_ensemble_h2o <- 
-     h2o.loadModel("04_Modeling/h2o_models/GLM_grid_0_AutoML_20180617_085805_model_0")
+     h2o.loadModel("04_Modeling/h2o_models/GLM_grid_0_AutoML_20180827_113110_model_0")
 
 predictions <- h2o.predict(stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
 typeof(predictions)
 
 predictions_tbl <- predictions %>% as.tibble() 
 
+predictions_tbl
+
 # AutoML Model Parameters
 
 automl_models_h2o@leaderboard
 
-deeplearning_h2o <- h2o.loadModel("04_Modeling/h2o_models/DeepLearning_0_AutoML_20180617_085805")
+deeplearning_h2o <- h2o.loadModel("04_Modeling/h2o_models/DeepLearning_0_AutoML_20180827_113110")
 
 deeplearning_h2o@allparameters
 
@@ -158,7 +155,7 @@ deeplearning_h2o@allparameters
 
 #  k=5 gives 6 models - the last uses all the data using the parameters found so far
 
-h2o.cross_validation_models(deeplearning_h2o)
+#h2o.cross_validation_models(deeplearning_h2o)
 
 h2o.auc(deeplearning_h2o, train = T, valid = T, xval = T)# xval-cross-validation AUC
 
@@ -170,7 +167,7 @@ automl_models_h2o@leaderboard
 data_transformed <- automl_models_h2o@leaderboard %>% 
      as.tibble() %>% 
      mutate(model_type = str_split(model_id, "_", simplify = T)[,1]) %>% 
-     # str_plit splits string into list of strings sepaerated by the pattern
+     # str_plit splits string into list of strings separated by the pattern
      # simplify = T makes it a matrix rather than a list
      slice(1:10) %>% 
      rownames_to_column() %>% 
@@ -252,15 +249,13 @@ plot_h2o_leaderboard <- function(h2o_leaderboard, order_by = c("auc", "logloss")
 }
 
 # Test Model Visualization
-
 automl_models_h2o@leaderboard %>% plot_h2o_leaderboard(order_by = "logloss")
-
 
 # 4. Assessing Performance ---- 
 
-deeplearning_h2o <- h2o.loadModel("04_Modeling/h2o_models/DeepLearning_0_AutoML_20180522_084030")
-stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/StackedEnsemble_BestOfFamily_0_AutoML_20180522_084030")
-glm_h2o <- h2o.loadModel("04_Modeling/h2o_models/GLM_grid_0_AutoML_20180522_084030_model_0")
+deeplearning_h2o <- h2o.loadModel("04_Modeling/h2o_models/DeepLearning_0_AutoML_20180827_113110")
+stacked_ensemble_h2o <- h2o.loadModel("04_Modeling/h2o_models/StackedEnsemble_BestOfFamily_0_AutoML_20180827_113110")
+glm_h2o <- h2o.loadModel("04_Modeling/h2o_models/GLM_grid_0_AutoML_20180827_113110_model_0")
 
 performance_h2o <- h2o.performance(stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
 
@@ -271,7 +266,7 @@ performance_h2o@metrics
 
 # Classifier Sumarry Metrics
 
-h2o.performance(performance_h2o, train = T, valid = T, xval = T)# gives auc of the test data
+h2o.performance(stacked_ensemble_h2o, train = T, valid = F, xval = F)# gives auc of the test data
 # the train, val and xval arguments only work for models - not performance objects                )
 h2o.auc(stacked_ensemble_h2o, train = T, valid = T, xval = T)
 
@@ -312,6 +307,7 @@ performance_tbl <- performance_h2o %>% h2o.metric() %>% as.tibble()
 # Precision vs Recall Plot
 h2o.confusionMatrix(performance_h2o)# test data
 
+# Numbers below may vary
 precision <- 20/(20 + 5)
 recall <- 20/(20 + 16)
 F1 <- (2*(precision * recall))/(precision + recall)# 0.6557
@@ -342,7 +338,7 @@ load_model_performance_metrics <- function(path, test_tbl){
 }
 
 # Test new function
-path <- "04_Modeling/h2o_models/DeepLearning_0_AutoML_20180521_113340"
+path <- "04_Modeling/h2o_models/DeepLearning_0_AutoML_20180827_113110"
 load_model_performance_metrics(path, test_tbl)
 
 # Iterate all models in the folder using fs package to help
@@ -492,7 +488,7 @@ newdata <- test_tbl
 order_by <- "auc"
 max_models <- 4
 size = 1
-model_id <- "GLM_grid_0_AutoML_20180528_111916_model_0"
+model_id <- "GLM_grid_0_AutoML_20180827_113110_model_0"
 
 plot_h2o_performance <- function(h2o_leaderboard, newdata, order_by = c("auc", "logloss"),
                                  max_models = 3, size = 1.5){
@@ -595,10 +591,10 @@ plot_h2o_performance <- function(h2o_leaderboard, newdata, order_by = c("auc", "
           ggplot(aes_string(x = "cumulative_data_fraction", y = "gain", 
                             color= "model_id", linetype = order_by)) +
           geom_line(size = size) +
-          geom_segment(x=0, y=0, xend=1, yend=1, color = "black", size = size) +
+          geom_segment(x = 0, y = 0, xend = 1, yend = 1, color = "black", size = size) +
           theme_tq() +
           scale_color_tq() +
-          expand_limits(x=c(0,1), y=c(0,1)) +
+          expand_limits(x = c(0, 1), y = c(0, 1)) +
           labs(title = "Gain", x = "Cumulative Data Fraction", y = "Gain") +
           theme(legend.position = "none")
      
@@ -607,10 +603,10 @@ plot_h2o_performance <- function(h2o_leaderboard, newdata, order_by = c("auc", "
           ggplot(aes_string(x = "cumulative_data_fraction", y = "lift", 
                             color= "model_id", linetype = order_by)) +
           geom_line(size = size) +
-          geom_segment(x=0, y=1, xend=1, yend=1, color = "black", size = size) +
+          geom_segment(x = 0, y = 1, xend = 1, yend = 1, color = "black", size = size) +
           theme_tq() +
           scale_color_tq() +
-          expand_limits(x=c(0,1), y=c(0,1)) +
+          expand_limits(x = c(0, 1), y = c(0, 1)) +
           labs(title = "Lift", x = "Cumulative Data Fraction", y = "Lift") +
           theme(legend.position = "none")
      
@@ -638,7 +634,7 @@ plot_h2o_performance <- function(h2o_leaderboard, newdata, order_by = c("auc", "
      return(ret)
 }
 
-# Test function:
+# Test Final Visualization ----
 
 automl_models_h2o@leaderboard %>% 
      plot_h2o_performance(newdata = test_tbl, order_by = "auc", max_models = 3)
@@ -650,7 +646,7 @@ automl_models_h2o@leaderboard %>%
 
 # AWESOME resource:  https://blog.h2o.ai/2016/06/h2o-gbm-tuning-tutorial-for-r/
 
-deeplearning_h2o <- h2o.loadModel("04_Modeling/h2o_models/DeepLearning_0_AutoML_20180522_084030")
+#deeplearning_h2o <- h2o.loadModel("04_Modeling/h2o_models/DeepLearning_0_AutoML_20180827_113110")
 
 h2o.performance(deeplearning_h2o, newdata = as.h2o(test_tbl))#AUC 0.8624698
 
@@ -678,10 +674,10 @@ deeplearning_grid_01
 
 h2o.getGrid("deeplearning_grid_01", sort_by = "auc", decreasing = T)
 
-deeplearning_grid_01_model_15 <- h2o.getModel("deeplearning_grid_01_model_15")
-
-deeplearning_grid_01_model_15 %>% h2o.auc(train = T, valid = T, xval = T)
-
-deeplearning_grid_01_model_15 %>% 
-     h2o.performance(newdata = as.h2o(test_tbl))
+# deeplearning_grid_01_model_15 <- h2o.getModel("deeplearning_grid_01_model_15")
+# 
+# deeplearning_grid_01_model_15 %>% h2o.auc(train = T, valid = T, xval = T)
+# 
+# deeplearning_grid_01_model_15 %>% 
+#      h2o.performance(newdata = as.h2o(test_tbl))
 

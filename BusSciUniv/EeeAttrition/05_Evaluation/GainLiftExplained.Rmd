@@ -6,6 +6,8 @@ prettydoc::html_pretty:
     highlight: github
 ---
 
+This document expands of the Gain/Lift part of Chapter 5.5.
+
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 if(!require(easypackages)){install.packages("easypackages")}
 library(easypackages)
@@ -15,7 +17,19 @@ packages("plyr", "dplyr", "ggplot2", prompt = FALSE)
 Need to rerun Lift Plot video to create the content for this document.
     
 ```{r, out.width = "600px", echo=FALSE}
-knitr::include_graphics("../05_Evaluation/GainLiftExplain.JPG")
+knitr::include_graphics("../images/gainChart1.jpeg")
+```
+
+```{r, out.width = "600px", echo=FALSE}
+knitr::include_graphics("../images/liftChart1.jpeg")
+```
+
+```{r, out.width = "600px", echo=FALSE}
+knitr::include_graphics("../images/GainLiftExplain.JPG")
+```
+
+```{r, out.width = "600px", echo=FALSE}
+knitr::include_graphics("../images/GainLiftExplain.JPG")
 ```
 
 

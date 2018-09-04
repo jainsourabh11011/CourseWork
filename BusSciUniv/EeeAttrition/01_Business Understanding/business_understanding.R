@@ -20,12 +20,12 @@ dept_job_role_tbl <- train_raw_tbl %>%
 
 dept_job_role_tbl %>% 
      
-     group_by(Department, Attrition) %>%  
+     group_by(Attrition) %>%  
      summarise(n = n()) %>% 
      ungroup() %>% 
-     
-     group_by(Department) %>% 
      mutate(pct = n/sum(n))
+
+# 16.1 % Attrition
 
 # 1B:  Understand the Drivers ----
 
@@ -127,26 +127,6 @@ calculate_attrition_cost <-  function(
 dept_job_role_tbl %>% 
      
      group_by(Department, JobRole, Attrition) %>%  
-     summarise(n = n()) %>%
-     ungroup() %>% 
-     
-     group_by(Department, JobRole) %>% 
-     mutate(pct = n/sum(n)) %>%
-     ungroup() %>% 
-     
-     filter(Attrition %in% c("Yes")) %>% 
-     arrange(desc(pct)) %>% 
-     mutate(above_industry_avg = case_when(
-          pct > 0.088 ~ "Yes",
-          TRUE ~ "No")) %>% 
-     
-     mutate(cost_of_attrition = calculate_attrition_cost(n = n, salary = 80000))
-
-# Workflow of Attrition ----
-
-dept_job_role_tbl %>% 
-     
-     group_by(Department, JobRole, Attrition) %>%  
      summarise(n = n()) %>%                       # replace with dplyr::count
      ungroup() %>% 
      
@@ -166,7 +146,7 @@ dept_job_role_tbl %>%
 
 dept_job_role_tbl %>% 
      
-     count(JobRole, Attrition) %>% #Instructor removed Department, not sure why - would still work
+     count(JobRole, Attrition) %>% 
      
      group_by(JobRole) %>% 
      mutate(pct = n/sum(n)) %>%                  # create count_to_pct()
