@@ -225,7 +225,7 @@ dept_job_role_tbl %>%
      mutate(cost_of_attrition = calculate_attrition_cost(n = n, salary = 80000)) %>% 
 
      # Data Manipulation 
-     mutate(name = str_c(Department, JobRole, sep = ": ") %>%  as.factor()) %>% #must be factors to order
+     mutate(name = str_c(Department, JobRole, sep = ": ") %>%  as_factor()) %>% #must be factors to order
      mutate(name = fct_reorder(name, cost_of_attrition)) %>% # orders the names by cost
      mutate(cost_text = str_c("$", format(cost_of_attrition / 1e6, digits = 2),
                               "M", sep = "")) %>% 
@@ -311,27 +311,18 @@ plot_attrition <- function(data, ..., .value,
 dept_job_role_tbl %>% 
      
      count(Department, JobRole, Attrition) %>% 
-     
      count_to_pct(Department, JobRole) %>% 
-     
      assess_attrition(Attrition, attrition_value = "Yes", baseline_pct = 0.088) %>% 
-     
      mutate(cost_of_attrition = calculate_attrition_cost(n = n, salary = 80000)) %>% 
-     
      plot_attrition(Department, JobRole, .value = cost_of_attrition, units = "M")
      
 dept_job_role_tbl %>% 
      
      count(JobRole, Attrition) %>% 
-     
      count_to_pct(JobRole) %>% 
-     
      assess_attrition(Attrition, attrition_value = "Yes", baseline_pct = 0.088) %>% 
-     
      mutate(cost_of_attrition = calculate_attrition_cost(n = n, salary = 80000)) %>% 
-     
      plot_attrition(JobRole, .value = cost_of_attrition, units = "M") +
-     
      labs(
           title = "Estimated Cost of Attrition by Job Role",
           x = "Cost of Attrition",

@@ -108,7 +108,7 @@ train_raw_tbl %>% select(Attrition, Age, Gender, MaritalStatus, NumCompaniesWork
 
 #  1. Decriptive Features: age, gender, marital status, etc
 
-train_raw_tbl <- select(Attrition, Age, Gender, MaritalStatus, NumCompaniesWorked, Over18, 
+train_raw_tbl  %>% select(Attrition, Age, Gender, MaritalStatus, NumCompaniesWorked, Over18, 
                         DistanceFromHome) %>% 
      plot_ggpairs(Attrition)
 # Observations:  

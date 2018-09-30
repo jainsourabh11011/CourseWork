@@ -3,6 +3,7 @@
 # Machine Readable ----
 
 # Setup ----
+setwd("~/GitHub/CourseWork/BusSciUniv/EeeAttrition")
 pkgs <- c(
      "recipes", 
      "tidyverse",  # Set of pkgs for data science: dplyr, ggplot2, purrr, tidyr, ...
@@ -84,7 +85,7 @@ recipe_obj %>% step_zv(all_predictors()) %>% prep() %>% bake(newdata = train_rea
 
 #  Transformations ----
 #   Changes the data to remove skew (log), stabilize variance (Box Cox) or make stationary (difference for time series)
-#   Normality is required for lineat models that depend on correlation (correlation analysis, linear and logistic regression)
+#   Normality is required for linear models that depend on correlation (correlation analysis, linear and logistic regression)
 #   Non-linear models like random forest handle non-linear data because they depend on how the data can be segregated
 
 # Filter skewed features
