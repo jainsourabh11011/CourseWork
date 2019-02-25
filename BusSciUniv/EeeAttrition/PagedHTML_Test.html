@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+<meta name="viewport" content="width=device-width">
+<meta property="og:title" content="Data Science for Business with R" />
+
+
+
+
+<meta name="author" content="Course Book" />
+
+<meta name="date" content="2019-01-21" />
+
+<meta name="description" content="Data Science for Business with R">
+
+<title>Data Science for Business with R</title>
+
+
+<link href="PagedHTML_Test_files/paged-0.1.2/css/default-fonts.css" rel="stylesheet" />
+<link href="PagedHTML_Test_files/paged-0.1.2/css/default-page.css" rel="stylesheet" />
+<link href="PagedHTML_Test_files/paged-0.1.2/css/default.css" rel="stylesheet" />
+<script src="PagedHTML_Test_files/paged-0.1.2/js/config.js"></script>
+<script src="PagedHTML_Test_files/paged-0.1.2/js/paged.js"></script>
+<script src="PagedHTML_Test_files/paged-0.1.2/js/hooks.js"></script>
+
+
+
+
+
+</head>
+
+<body>
+
+<div class="running-h1-title"></div>
+
+<div class="running-h2-title"></div>
+
+
+
+<div class="front-page">
+<div id="header" class="title-page">
+<h1 class="title">Data Science for Business with R</h1>
+<h2 class="author">Course Book</h2>
+<h2 class="date">2019-01-21</h2>
+</div>
+</div>
+
+<div class="front-matter-container">
+<div id="TOC" class="level1 toc front-matter">
+<ul>
+<li><a href="#document-limitations"><span class="toc-section-number">1</span> Document Limitations</a></li>
+<li><a href="#business-problem"><span class="toc-section-number">2</span> Business Problem</a><ul>
+<li><a href="#what-happens-when-good-employees-leave"><span class="toc-section-number">2.1</span> What Happens When Good Employees Leave</a></li>
+<li><a href="#calculating-the-cost-of-turnover"><span class="toc-section-number">2.2</span> Calculating the Cost of Turnover</a></li>
+</ul></li>
+<li><a href="#toolbox-supporting-analysis"><span class="toc-section-number">3</span> Toolbox Supporting Analysis</a><ul>
+<li><a href="#integrated-data-science-frameworks-bspf-crisp-dm"><span class="toc-section-number">3.1</span> Integrated Data Science Frameworks: BSPF &amp; CRISP-DM</a></li>
+</ul></li>
+</ul>
+</div>
+</div>
+
+<div id="document-limitations" class="section level1">
+<h1><span class="header-section-number">1</span> Document Limitations</h1>
+<p>The course DS4B 201-R: Data Science for Business with R by Matt Dancho has been reformatted into book format using RStudio’s <code>pagedown</code> package. (See <a href="https://pagedown.rbind.io" class="uri">https://pagedown.rbind.io</a> for the full documentation.) This document is strictly limited to course attendees. The copyright and distribution of this document are controlled. The documented follows the same copyright and limited distributions as the primary course.</p>
+<p>At no time may this documented be shared or maintained in a public or shared repository.</p>
+</div>
+<div id="business-problem" class="section level1">
+<h1><span class="header-section-number">2</span> Business Problem</h1>
+<p>Differentiating between productive and non-productive employees is difficult and highly subjective. Some employees are in the top 20% (all stars), some are in the middle 60% (productive), and some are in the bottom 20%. The bottom 20% can be OK or can be poor depending on the overall level of talent in your organization. Sometimes just because they are bottom 20% they are still good employees because the organization is such a high performing organization that everyone they employee is good. However, most organizations do have bad employees.</p>
+<p>Now, in terms of defining productivity, if on a 1 to 4 scale with 1 being poor and 4 being the best that managers rate employees 3 to 4, you can usually be OK in viewing the 4’s as productive. They may not always be all stars, especially if 50% of people reviewed get 4’s but in reality only 20% should by the bell curve. However, if a manager rates someone as a 1, there is definitely a problem. These people need to either have immediate corrective actions taken or need to be cut loose. This is good attrition because the employee is a poor job/culture fit.</p>
+<p>The analysis we are doing specifically looks at bad attrition, losing people that are 3’s and 4’s. I call them high performers, but in reality, I should be saying productive employees. This group is probably driving 80% of the business results.</p>
+<p>Non-profits will need to be handled based on what the business finds important. While maximizing profit may not be the goal, there are still goals. For example, one goal might be to increase high school graduation rates in schools. This could be set up showing that the percentage of student dropouts are much higher in the district of focus and that increasing graduation rates is expected to reduce crime and increase workforce productivity. Crime reduction would have a savings associated with it. Workforce productivity would have a financial benefit associated with it. These are possible ways we can show financial value for a non-profit.</p>
+<p>Non-Profit Cost Analysis: <a href="https://www.bridgespan.org/bridgespan/Images/articles/nonprofit-cost-analysis-toolkit/NonprofitCostsAnalysisToolkit.pdf" class="uri">https://www.bridgespan.org/bridgespan/Images/articles/nonprofit-cost-analysis-toolkit/NonprofitCostsAnalysisToolkit.pdf</a></p>
+<p>Non-Profit Strategic Planning: <a href="https://knowhownonprofit.org/organisation/strategy" class="uri">https://knowhownonprofit.org/organisation/strategy</a>
+The tools are quite similar to what you might find in a for-profit scenario. The maximization will be to maximize the financial delta between cost and benefit (to public) versus cost and revenue (for organization).</p>
+<div id="what-happens-when-good-employees-leave" class="section level2">
+<h2><span class="header-section-number">2.1</span> What Happens When Good Employees Leave</h2>
+<p><em>You takeaway our top 20 employees and we become a mediocre company</em> –Bill Gates</p>
+<ul>
+<li>All employees turnover, some just faster</li>
+<li>Impact of Attrition
+<ul>
+<li>Varies based on employee productivity</li>
+<li>Can be measured</li>
+</ul></li>
+<li>Bad turnover costs the organization</li>
+</ul>
+<p><img src="images/CostValueEmployee.JPG" width="500px" /></p>
+<p><a href="https://www.linkedin.com/pulse/20130816200159-131079-employee-retention-now-a-big-issue-why-the-tide-has-turned/">Employee Retention Now a Big Issue: Why the Tide has Turned</a>
+When a good employee quits, costs are incurred.</p>
+<p><img src="images/CostQuit.JPG" width="500px" /></p>
+<ul>
+<li>Quits</li>
+<li>Vacancy during search</li>
+<li>Cost to train new employee</li>
+</ul>
+<p>Not all attrition is bad</p>
+<p><img src="images/NotAllBad.JPG" width="500px" /></p>
+</div>
+<div id="calculating-the-cost-of-turnover" class="section level2">
+<h2><span class="header-section-number">2.2</span> Calculating the Cost of Turnover</h2>
+<ul>
+<li>Direct Costs
+<ul>
+<li>Average Separation (Exit Interviews, Separation Pay, Admin Costs) ($500)</li>
+<li>Average Vacancy (Temp Help &amp; OT) ($10,000)</li>
+<li>Average Acquisition (Ads, Travel, Interviews, Physicals, Drug Testing, Bonuses, Reference Checks, etc) ($4,900)</li>
+<li>Average Placement (New Supplies, Onboarding, Training) ($3,500)</li>
+</ul></li>
+</ul>
+<p>500+10,000+4,900+3,500=18,900</p>
+<ul>
+<li>Productivity Costs (Hidden Costs - only recognized when the problem becomes large. Much higher than direct costs.)
+<ul>
+<li>Annual revenue per Employee - less COGS (250,000)</li>
+<li>Workdays per Year (240)</li>
+<li>Average Workdays Position Open (40)</li>
+<li>Average Onboarding/Training Period (60 ~ 12 weeks)</li>
+<li>Effectiveness During Onboarding/Training (50%)</li>
+</ul></li>
+</ul>
+<p>(250,000/240)<em>(40+(60</em>.5))=72,917</p>
+<ul>
+<li>Salary &amp; Benefits
+<ul>
+<li>Average Salary + Benefits (80,000)</li>
+<li>Workdays per Year (240)</li>
+<li>Average Workdays Position Open (40)</li>
+</ul></li>
+</ul>
+<p>(80,000/240)*40=13,333</p>
+<p>TotalCosts=18,900+72,917+13,333=78,483</p>
+<p>If there 200 productive employees leave each year, then 200*78,483=15,000,000 is the financial cost of turnover.</p>
+<p>Just a 10% reduction (using data science) saves the organization $1.6M/year!</p>
+</div>
+</div>
+<div id="toolbox-supporting-analysis" class="section level1">
+<h1><span class="header-section-number">3</span> Toolbox Supporting Analysis</h1>
+<div id="integrated-data-science-frameworks-bspf-crisp-dm" class="section level2">
+<h2><span class="header-section-number">3.1</span> Integrated Data Science Frameworks: BSPF &amp; CRISP-DM</h2>
+<p>Business Science Problem Framework</p>
+<p><img src="images/DS_Framework.JPG" width="500px" /></p>
+</div>
+</div>
+
+
+
+<script>
+// when the page is about to reload via servr, remember the scroll position
+document.addEventListener('servr:reload', function(e) {
+  sessionStorage.setItem('pagedown-scroll', window.scrollY);
+});
+</script>
+</body>
+</html>
