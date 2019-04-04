@@ -1,0 +1,60 @@
+---
+title: "R 4 Business"
+output:
+  html_document:
+    highlight: pygments
+    theme: spacelab
+    toc: yes
+---
+
+<style type="text/css">
+p{ /* Normal  */
+   font-size: 14px;
+   line-height: 18px;}
+body{ /* Normal  */
+   font-size: 14px;}
+td {  /* Table  */
+   font-size: 12px;}
+h1 { /* Header 1 */
+ font-size: 26px;
+ color: #4294ce;}
+h2 { /* Header 2 */
+ font-size: 22px;}
+h3 { /* Header 3 */
+ font-size: 18px;}
+code.r{ /* Code block */
+  font-size: 12px;}
+pre { /* Code block */
+  font-size: 12px}
+#table-of-contents h2 {
+background-color: #4294ce;}
+#table-of-contents{
+background: #688FAD;}
+#nav-top span.glyphicon{
+color: #4294ce;}
+#postamble{
+background: #4294ce;
+border-top: ;}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(
+     root.dir = 'C:/Users/czwea/Documents/GitHub/CourseWork/BusSciUniv/RforBusiness')
+knitr::opts_chunk$set(eval=FALSE)
+```
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+#remotes::install_github("rstudio/gt")
+rm(list = ls())
+if(!require(easypackages)){install.packages("easypackages")}
+library(easypackages)
+packages("tidyverse", "gt", "here", "stringr", prompt = TRUE)
+setwd("~/GitHub/CourseWork/BusSciUniv/RforBusiness")
+```
+
+# Business Case
+
+2 objectives for a bicycle shop:
+
+1. New Prodcut Idea
+2. Segementation and Targeted Adverstisements
+
