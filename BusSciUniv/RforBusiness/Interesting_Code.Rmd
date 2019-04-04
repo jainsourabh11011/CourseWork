@@ -128,4 +128,28 @@ bike_orderlines_colnames_tbl <- bike_orderlines_tbl %>%
      rename_at(vars(bikeshop_name:state),
                ~ str_c("cust_", .)) 
 ```
+```{r separate2}
+bikes_tbl %>% select(model) %>%
+  
+  # separate using spaces
+  separate(col     = model, 
+           into    = str_c("model_", 1:7), 
+           sep     = " ", 
+           remove  = FALSE, 
+           fill    = "right")
+
+  # takes model description and subtracts out the model name
+  mutate(model_tier = model %>% str_replace(model_base, replacement = "") %>% str_trim()) %>%
+  
+  # Remove unnecessary columns - contains cannot use regex
+  select(-matches("[0-9]"))
+  
+    # Create Flags
+  mutate(
+    black     = model_tier %>% str_to_lower() %>% str_detect("black") %>% as.numeric(),
+    hi_mod    = model_tier %>% str_to_lower() %>% str_detect("hi-mod") %>% as.numeric(),
+    team      = model_tier %>% str_to_lower() %>% str_detect("team") %>% as.numeric()
+
+  
+```
 
